@@ -1,0 +1,185 @@
+classDiagram
+
+class User {
+    +int id
+    +string fullName
+    +string email
+    +string password
+    +Role role
+    +login()
+    +logout()
+}
+
+class Product {
+    +int id
+    +string name
+    +string reference
+    +string barcode
+    +string description
+    +float purchasePrice
+    +float sellingPrice
+    +int quantity
+    +int minimumStock
+    +string image
+}
+
+class Category {
+    +int id
+    +string name
+    +string description
+}
+
+class Supplier {
+    +int id
+    +string companyName
+    +string phone
+    +string email
+    +string address
+}
+
+class StockEntry {
+    +int id
+    +Date entryDate
+    +int quantity
+}
+
+class StockOutput {
+    +int id
+    +Date outputDate
+    +int quantity
+}
+
+class Notification {
+    +int id
+    +string title
+    +string message
+    +boolean isRead
+    +Date createdAt
+}
+
+class AIAgent {
+    +analyzeStock()
+    +predictStockOut()
+    +recommendReorder()
+    +generateReport()
+    +answerQuestion()
+}
+
+class AIConversation {
+    +int id
+    +string question
+    +string answer
+    +Date createdAt
+}
+
+User "1" --> "*" StockEntry : creates
+User "1" --> "*" StockOutput : creates
+User "1" --> "*" Notification : receives
+User "1" --> "*" AIConversation : asks
+
+Category "1" --> "*" Product : contains
+Supplier "1" --> "*" Product : supplies
+
+Product "1" --> "*" StockEntry
+Product "1" --> "*" StockOutput
+
+Product --> Notification : triggers
+
+AIAgent --> Product : analyzes
+AIAgent --> StockEntry : analyzes
+AIAgent --> StockOutput : analyzes
+AIAgent --> Notification : creates
+
+AIConversation "*" --> "1" AIAgentclassDiagram
+
+class User {
+    +int id
+    +string fullName
+    +string email
+    +string password
+    +Role role
+    +login()
+    +logout()
+}
+
+class Product {
+    +int id
+    +string name
+    +string reference
+    +string barcode
+    +string description
+    +float purchasePrice
+    +float sellingPrice
+    +int quantity
+    +int minimumStock
+    +string image
+}
+
+class Category {
+    +int id
+    +string name
+    +string description
+}
+
+class Supplier {
+    +int id
+    +string companyName
+    +string phone
+    +string email
+    +string address
+}
+
+class StockEntry {
+    +int id
+    +Date entryDate
+    +int quantity
+}
+
+class StockOutput {
+    +int id
+    +Date outputDate
+    +int quantity
+}
+
+class Notification {
+    +int id
+    +string title
+    +string message
+    +boolean isRead
+    +Date createdAt
+}
+
+class AIAgent {
+    +analyzeStock()
+    +predictStockOut()
+    +recommendReorder()
+    +generateReport()
+    +answerQuestion()
+}
+
+class AIConversation {
+    +int id
+    +string question
+    +string answer
+    +Date createdAt
+}
+
+User "1" --> "*" StockEntry : creates
+User "1" --> "*" StockOutput : creates
+User "1" --> "*" Notification : receives
+User "1" --> "*" AIConversation : asks
+
+Category "1" --> "*" Product : contains
+Supplier "1" --> "*" Product : supplies
+
+Product "1" --> "*" StockEntry
+Product "1" --> "*" StockOutput
+
+Product --> Notification : triggers
+
+AIAgent --> Product : analyzes
+AIAgent --> StockEntry : analyzes
+AIAgent --> StockOutput : analyzes
+AIAgent --> Notification : creates
+
+AIConversation "*" --> "1" AIAgent
