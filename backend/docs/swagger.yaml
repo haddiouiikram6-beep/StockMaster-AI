@@ -1,0 +1,654 @@
+openapi: 3.0.3
+info:
+  title: StockMaster AI - Inventory & AI Management API
+  version: 1.0.0
+  description: >
+    Production-ready RESTful backend API for StockMaster AI mobile stock management application,
+    featuring JWT authentication, RBAC, inventory catalog & movement tracking, and an integrated
+    intelligent AI Agent powered by OpenAI Function Calling.
+servers:
+  - url: http://localhost:3000/api
+    description: Local Development Server
+
+paths:
+  # ----------------- AUTHENTICATION -----------------
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fullName, email, password]
+              properties:
+                fullName:
+                  type: string
+                  example: Jane Doe
+                email:
+                  type: string
+                  format: email
+                  example: jane@stockmaster.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: Password123!
+                role:
+                  type: string
+                  enum: [admin, manager, employee]
+                  default: employee
+      responses:
+        201:
+          description: User registered successfully
+        409:
+          description: Email already in use
+        422:
+          description: Validation error
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate and receive Access & Refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@stockmaster.com
+                password:
+                  type: string
+                  example: Admin123!
+      responses:
+        200:
+          description: Authentication successful
+        401:
+          description: Invalid email or password
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Renew Access Token using Refresh Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        200:
+          description: Token pair refreshed
+        401:
+          description: Expired or revoked refresh token
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke Refresh Token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        200:
+          description: Logged out successfully
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current authenticated user profile
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: User profile retrieved
+        401:
+          description: Unauthorized
+
+  # ----------------- CATEGORIES -----------------
+  /categories:
+    get:
+      tags: [Categories]
+      summary: List all product categories
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        200:
+          description: List of categories
+    post:
+      tags: [Categories]
+      summary: Create new category (Admin/Manager)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: Electronics
+                description:
+                  type: string
+                  example: Peripherals and devices
+      responses:
+        201:
+          description: Category created
+        403:
+          description: Insufficient permissions
+        409:
+          description: Duplicate category name
+
+  /categories/{id}:
+    get:
+      tags: [Categories]
+      summary: Get category by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Category details
+        404:
+          description: Category not found
+    put:
+      tags: [Categories]
+      summary: Update category (Admin/Manager)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        200:
+          description: Category updated
+        404:
+          description: Category not found
+    delete:
+      tags: [Categories]
+      summary: Delete category (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Category deleted
+        409:
+          description: Cannot delete category with associated products
+
+  # ----------------- SUPPLIERS -----------------
+  /suppliers:
+    get:
+      tags: [Suppliers]
+      summary: List all suppliers
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        200:
+          description: List of suppliers
+    post:
+      tags: [Suppliers]
+      summary: Create new supplier (Admin/Manager)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: Tech Logistics
+                phone:
+                  type: string
+                  example: +1-555-0100
+                email:
+                  type: string
+                  format: email
+                  example: supply@techlogistics.com
+      responses:
+        201:
+          description: Supplier created
+
+  /suppliers/{id}:
+    get:
+      tags: [Suppliers]
+      summary: Get supplier by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Supplier details
+        404:
+          description: Supplier not found
+    put:
+      tags: [Suppliers]
+      summary: Update supplier (Admin/Manager)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                email:
+                  type: string
+      responses:
+        200:
+          description: Supplier updated
+    delete:
+      tags: [Suppliers]
+      summary: Delete supplier (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Supplier deleted
+
+  # ----------------- PRODUCTS -----------------
+  /products:
+    get:
+      tags: [Products]
+      summary: List products with pagination, filtering, and sorting
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: categoryId
+          schema:
+            type: integer
+        - in: query
+          name: supplierId
+          schema:
+            type: integer
+        - in: query
+          name: minStock
+          schema:
+            type: boolean
+          description: Filter products that are currently low on stock
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Keyword search on name, reference, or description
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [name, price, quantity, reference, createdAt, updatedAt]
+            default: createdAt
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        200:
+          description: Filtered product catalog
+    post:
+      tags: [Products]
+      summary: Create new product (Admin/Manager)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, reference, price, categoryId]
+              properties:
+                name:
+                  type: string
+                  example: Mechanical Gaming Keyboard
+                reference:
+                  type: string
+                  example: PROD-KB-001
+                description:
+                  type: string
+                  example: RGB mechanical switch keyboard
+                price:
+                  type: number
+                  example: 89.99
+                quantity:
+                  type: integer
+                  default: 0
+                  example: 50
+                minStock:
+                  type: integer
+                  default: 5
+                  example: 10
+                categoryId:
+                  type: integer
+                  example: 1
+                supplierId:
+                  type: integer
+                  example: 1
+      responses:
+        201:
+          description: Product created
+        409:
+          description: Reference SKU already exists
+
+  /products/{id}:
+    get:
+      tags: [Products]
+      summary: Get product details by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Product details
+        404:
+          description: Product not found
+    put:
+      tags: [Products]
+      summary: Update product (Admin/Manager)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                reference:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                quantity:
+                  type: integer
+                minStock:
+                  type: integer
+                categoryId:
+                  type: integer
+                supplierId:
+                  type: integer
+      responses:
+        200:
+          description: Product updated
+    delete:
+      tags: [Products]
+      summary: Delete product (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Product deleted
+        409:
+          description: Product has historical stock movements
+
+  # ----------------- STOCK MOVEMENTS -----------------
+  /stock-movements:
+    get:
+      tags: [Stock Movements]
+      summary: List inventory stock movements
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: productId
+          schema:
+            type: integer
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [IN, OUT, ADJUSTMENT]
+      responses:
+        200:
+          description: List of stock movements
+    post:
+      tags: [Stock Movements]
+      summary: Record a new stock movement with transactional product quantity update
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, type, quantity]
+              properties:
+                productId:
+                  type: integer
+                  example: 1
+                type:
+                  type: string
+                  enum: [IN, OUT, ADJUSTMENT]
+                  example: IN
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 20
+                reason:
+                  type: string
+                  example: Restock shipment arrival #884
+                date:
+                  type: string
+                  format: date-time
+      responses:
+        201:
+          description: Stock movement recorded and product quantity updated
+        400:
+          description: Insufficient stock for OUT movement
+        404:
+          description: Product not found
+
+  /stock-movements/{id}:
+    get:
+      tags: [Stock Movements]
+      summary: Get stock movement details by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Stock movement details
+        404:
+          description: Movement not found
+
+  # ----------------- AI AGENT -----------------
+  /ai/chat:
+    post:
+      tags: [AI Agent]
+      summary: Send prompt to StockMaster AI Agent (Supports SSE Streaming)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                conversationId:
+                  type: integer
+                  example: 1
+                message:
+                  type: string
+                  example: Which products are running low in stock?
+                stream:
+                  type: boolean
+                  default: false
+      responses:
+        200:
+          description: AI response with executed tool metadata or SSE token stream
+        400:
+          description: Prompt injection violation or invalid request
+        429:
+          description: Rate limit exceeded
+
+  /ai/conversations:
+    get:
+      tags: [AI Agent]
+      summary: Get all conversations of authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: List of user conversations
+
+  /ai/conversations/{id}:
+    get:
+      tags: [AI Agent]
+      summary: Get specific conversation history with all messages
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Conversation and messages
+        404:
+          description: Conversation not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
