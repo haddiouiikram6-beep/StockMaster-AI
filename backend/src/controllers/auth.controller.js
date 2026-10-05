@@ -8,7 +8,7 @@ const { logger } = require('../utils/logger');
  */
 const register = async (req, res, next) => {
   try {
-    const { fullName, email, password, role } = req.body;
+    const { fullName, email, password } = req.body;
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -22,7 +22,7 @@ const register = async (req, res, next) => {
       fullName,
       email,
       password,
-      role: role || 'employee'
+      role: 'employee'
     });
 
     logger.info(`User registered successfully: ${user.email} (ID: ${user.id}, Role: ${user.role})`);

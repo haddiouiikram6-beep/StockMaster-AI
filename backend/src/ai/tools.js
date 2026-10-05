@@ -8,6 +8,45 @@ const tools = [
   {
     type: 'function',
     function: {
+      name: 'getInventorySummary',
+      description: 'Get a general summary of the entire inventory, including total value, total items, and overall status.',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    },
+    schema: z.object({}),
+    allowedRoles: ['admin', 'manager', 'employee']
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getCategories',
+      description: 'List all product categories.',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    },
+    schema: z.object({}),
+    allowedRoles: ['admin', 'manager', 'employee']
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getSuppliers',
+      description: 'List all suppliers.',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    },
+    schema: z.object({}),
+    allowedRoles: ['admin', 'manager', 'employee']
+  },
+  {
+    type: 'function',
+    function: {
       name: 'getProductStock',
       description: 'Get current stock quantity, status, and minimum stock threshold for a product by ID or reference code.',
       parameters: {
@@ -243,6 +282,19 @@ const tools = [
       query: z.string().trim().min(1, 'Search query cannot be empty'),
       limit: z.number().int().positive().max(50).optional().default(10)
     }),
+    allowedRoles: ['admin', 'manager', 'employee']
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'analyzeStock',
+      description: 'Analyze inventory to find critical issues, potential stockouts, and overall stock health.',
+      parameters: {
+        type: 'object',
+        properties: {}
+      }
+    },
+    schema: z.object({}),
     allowedRoles: ['admin', 'manager', 'employee']
   }
 ];

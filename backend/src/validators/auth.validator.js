@@ -3,8 +3,7 @@ const { z } = require('zod');
 const registerSchema = z.object({
   fullName: z.string().trim().min(2, 'Full name must be at least 2 characters long'),
   email: z.string().trim().email('Invalid email address format'),
-  password: z.string().min(6, 'Password must be at least 6 characters long'),
-  role: z.enum(['admin', 'manager', 'employee']).optional().default('employee')
+  password: z.string().min(6, 'Password must be at least 6 characters long')
 });
 
 const loginSchema = z.object({

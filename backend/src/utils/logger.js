@@ -70,7 +70,7 @@ const aiAuditLogger = winston.createLogger({
   ]
 });
 
-if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test') {
   logger.add(
     new winston.transports.Console({
       format: winston.format.combine(

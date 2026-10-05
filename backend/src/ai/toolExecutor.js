@@ -383,6 +383,62 @@ class ToolExecutor {
           };
         }
 
+        case 'getInventorySummary': {
+          const products = await Product.findAll();
+          let totalValue = 0;
+          let totalItems = 0;
+          let lowStockCount = 0;
+          
+          for (const p of products) {
+            totalItems += p.quantity;
+            totalValue += parseFloat(p.price) * p.quantity;
+            if (p.quantity <= p.minStock) lowStockCount++;
+          }
+          
+          return {
+            totalProducts: products.length,
+            totalItems,
+            totalValue: parseFloat(totalValue.toFixed(2)),
+            lowStockCount
+          };
+        }
+
+        case 'getCategories': {
+          const categories = await Category.findAll({ attributes: ['id', 'name', 'description'] });
+          return {
+            count: categories.length,
+            categories
+          };
+        }
+
+        case 'getSuppliers': {
+          const suppliers = await Supplier.findAll({ attributes: ['id', 'name', 'email', 'phone'] });
+          return {
+            count: suppliers.length,
+            suppliers
+          };
+        }
+
+        case 'analyzeStock': {
+          // Find critical products
+          const products = await Product.findAll({
+            where: where(col('quantity'), '<=', col('minStock')),
+            order: [['quantity', 'ASC']],
+            limit: 10
+          });
+          
+          return {
+            issuesCount: products.length,
+            criticalProducts: products.map(p => ({
+              id: p.id,
+              name: p.name,
+              quantity: p.quantity,
+              minStock: p.minStock,
+              status: p.quantity === 0 ? 'OUT_OF_STOCK' : 'LOW_STOCK'
+            }))
+          };
+        }
+
         default:
           return { error: true, message: `Tool execution handler not found for '${toolName}'.` };
       }

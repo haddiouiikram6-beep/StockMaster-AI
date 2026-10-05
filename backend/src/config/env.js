@@ -23,8 +23,10 @@ const env = {
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 
-  // OpenAI Configuration
+  // OpenAI / LLM Configuration
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || '',
+  OPENAI_MODEL: process.env.OPENAI_MODEL || '',
 
   // CORS Configuration
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*'

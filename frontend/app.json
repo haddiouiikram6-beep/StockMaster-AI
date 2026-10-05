@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "StockMaster-AI",
+    "slug": "stockmaster-ai",
+    "scheme": "stockmaster",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F5FBFA"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-video"
+    ]
+  }
+}

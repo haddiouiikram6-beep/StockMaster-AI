@@ -13,20 +13,32 @@ describe('Auth Integration Tests', () => {
     await sequelize.close();
   });
 
-  it('POST /api/auth/register - should register a new user successfully', async () => {
+  it('POST /api/auth/register - should register a new user successfully and assign default employee role', async () => {
     const res = await request(app)
       .post('/api/auth/register')
       .send({
         fullName: 'New User',
         email: 'newuser@example.com',
-        password: 'Password123!',
-        role: 'employee'
+        password: 'Password123!'
       });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.email).toBe('newuser@example.com');
+    expect(res.body.data.role).toBe('employee');
     expect(res.body.data.password).toBeUndefined(); // Password must not be returned
+
+    // User can login with own credentials
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'newuser@example.com',
+        password: 'Password123!'
+      });
+
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.success).toBe(true);
+    expect(loginRes.body.data.user.email).toBe('newuser@example.com');
   });
 
   it('POST /api/auth/register - should reject duplicate email', async () => {

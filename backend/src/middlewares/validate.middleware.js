@@ -16,6 +16,8 @@ const validate = (schema, source = 'body') => {
           message: err.message
         }));
 
+        console.error('VALIDATION FAILED ON ENDPOINT:', req.originalUrl, 'PAYLOAD:', req[source], 'ERRORS:', formattedErrors);
+
         return res.status(422).json({
           success: false,
           message: 'Validation failed',
