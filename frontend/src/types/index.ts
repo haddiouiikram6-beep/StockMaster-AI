@@ -34,6 +34,7 @@ export interface Product {
   supplierId?: number;
   category?: Category;
   supplier?: Supplier;
+  imageUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -9,9 +9,12 @@ import {
   RefreshControl,
   Modal,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadProductImage } from '../../src/services/cloudinaryService';
 import { Ionicons } from '@expo/vector-icons';
 import { SearchBar } from '../../src/components/SearchBar';
 import { FilterChip } from '../../src/components/FilterChip';
@@ -38,6 +41,9 @@ export default function ProductsScreen() {
   const [newQty, setNewQty] = useState('');
   const [newMinStock, setNewMinStock] = useState('5');
   const [formError, setFormError] = useState<string | null>(null);
+
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     data: productsData,
@@ -158,6 +164,33 @@ export default function ProductsScreen() {
     return sum > 0 ? formatCurrency(sum) : formatCurrency(40290);
   }, [rawProducts]);
 
+  const handleSelectImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        setFormError('L’image ne doit pas dépasser 5 Mo.');
+        return;
+      }
+
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (asset.mimeType && !validTypes.includes(asset.mimeType)) {
+        setFormError('Format d’image non pris en charge.');
+        return;
+      }
+      
+      setFormError(null);
+      setSelectedImage(asset);
+    }
+  };
+
   const handleCreateProduct = async () => {
     if (!newName.trim() || !newRef.trim() || !newPrice.trim()) {
       setFormError('Veuillez remplir le nom du produit, la référence SKU et le prix.');
@@ -166,6 +199,13 @@ export default function ProductsScreen() {
 
     try {
       setFormError(null);
+      setIsUploading(true);
+
+      let uploadedImageUrl = null;
+      if (selectedImage) {
+        uploadedImageUrl = await uploadProductImage(selectedImage.uri);
+      }
+
       const catId = categoriesData?.data?.[0]?.id || 1;
       await createProductMutation.mutateAsync({
         name: newName.trim(),
@@ -174,6 +214,7 @@ export default function ProductsScreen() {
         quantity: parseInt(newQty, 10) || 0,
         minStock: parseInt(newMinStock, 10) || 5,
         categoryId: catId,
+        imageUrl: uploadedImageUrl,
       });
 
       setShowAddModal(false);
@@ -181,11 +222,15 @@ export default function ProductsScreen() {
       setNewRef('');
       setNewPrice('');
       setNewQty('');
+      setNewMinStock('5');
+      setSelectedImage(null);
       Alert.alert('Succès', 'Produit créé avec succès.');
     } catch (err: any) {
       setFormError(
-        err.response?.data?.message || 'Échec de la création du produit. Vérifiez l\'unicité du SKU.'
+        err.message || err.response?.data?.message || 'Échec de la création du produit. Vérifiez l\'unicité du SKU.'
       );
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -332,6 +377,23 @@ export default function ProductsScreen() {
                 </View>
               )}
 
+              <View style={styles.imagePickerContainer}>
+                <Text style={styles.imagePickerLabel}>Image du produit</Text>
+                {selectedImage ? (
+                  <View style={styles.selectedImageWrapper}>
+                    <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
+                    <TouchableOpacity onPress={handleSelectImage} style={styles.changeImageBtn}>
+                      <Text style={styles.changeImageText}>Modifier l’image</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity onPress={handleSelectImage} style={styles.imagePlaceholder}>
+                    <Ionicons name="image-outline" size={32} color={COLORS.secondaryText} />
+                    <Text style={styles.imagePlaceholderText}>Ajouter une image</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <InputField
                 label="Nom du produit *"
                 placeholder="ex: Souris sans fil"
@@ -376,9 +438,9 @@ export default function ProductsScreen() {
               </View>
 
               <PrimaryButton
-                title="Créer le produit"
+                title={isUploading ? "Ajout en cours..." : "Créer le produit"}
                 onPress={handleCreateProduct}
-                loading={createProductMutation.isPending}
+                loading={isUploading || createProductMutation.isPending}
                 style={styles.modalSaveBtn}
               />
             </View>
@@ -537,5 +599,50 @@ const styles = StyleSheet.create({
   },
   modalSaveBtn: {
     marginTop: 8,
+  },
+  imagePickerContainer: {
+    marginBottom: 16,
+  },
+  imagePickerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  imagePlaceholder: {
+    height: 100,
+    width: 100,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    fontSize: 12,
+    color: COLORS.secondaryText,
+    marginTop: 4,
+  },
+  selectedImageWrapper: {
+    alignItems: 'flex-start',
+  },
+  previewImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  changeImageBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: COLORS.lightCyan,
+    borderRadius: 6,
+  },
+  changeImageText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primaryBlue,
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Product } from '../types';
 import { COLORS, SHADOWS } from '../constants/theme';
@@ -33,13 +33,17 @@ export const ProductRow: React.FC<ProductRowProps> = ({
       onPress={onPress}
       style={[styles.container, isCompact ? styles.containerCompact : styles.containerFull]}
     >
-      <View style={styles.iconBox}>
-        <Ionicons
-          name={getCategoryIcon(product.category?.name)}
-          size={18}
-          color={COLORS.primaryBlue}
-        />
-      </View>
+      {product.imageUrl ? (
+        <Image source={{ uri: product.imageUrl }} style={styles.iconBox} />
+      ) : (
+        <View style={styles.iconBox}>
+          <Ionicons
+            name={getCategoryIcon(product.category?.name)}
+            size={18}
+            color={COLORS.primaryBlue}
+          />
+        </View>
+      )}
 
       <View style={styles.infoCol}>
         <Text style={styles.name} numberOfLines={1}>

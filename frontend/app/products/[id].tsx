@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -206,6 +207,14 @@ export default function ProductDetailsScreen() {
       >
         {/* Main Product Card */}
         <View style={styles.mainCard}>
+          {product.imageUrl ? (
+            <Image source={{ uri: product.imageUrl }} style={styles.detailsImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.detailsImagePlaceholder}>
+              <Ionicons name="cube-outline" size={48} color={COLORS.primaryBlue} />
+            </View>
+          )}
+
           <View style={styles.titleBadgeRow}>
             <Text style={styles.productName}>{product.name}</Text>
             <StockBadge
@@ -429,6 +438,21 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     marginBottom: 16,
     ...SHADOWS.sm,
+  },
+  detailsImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 14,
+    marginBottom: 16,
+  },
+  detailsImagePlaceholder: {
+    width: '100%',
+    height: 180,
+    borderRadius: 14,
+    backgroundColor: COLORS.lightCyan,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   titleBadgeRow: {
     flexDirection: 'row',

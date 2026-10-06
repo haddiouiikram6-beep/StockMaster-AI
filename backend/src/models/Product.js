@@ -74,6 +74,10 @@ Product.init(
         key: 'id'
       },
       onDelete: 'SET NULL'
+    },
+    imageUrl: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   },
   {

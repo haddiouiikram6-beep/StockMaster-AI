@@ -8,7 +8,8 @@ const createProductSchema = z.object({
   quantity: z.coerce.number().int().min(0, 'Quantity must be an integer >= 0').default(0),
   minStock: z.coerce.number().int().min(0, 'Minimum stock must be an integer >= 0').default(5),
   categoryId: z.coerce.number().int().positive('Category ID must be a positive integer'),
-  supplierId: z.coerce.number().int().positive('Supplier ID must be a positive integer').optional().nullable()
+  supplierId: z.coerce.number().int().positive('Supplier ID must be a positive integer').optional().nullable(),
+  imageUrl: z.string().url('Must be a valid URL').optional().nullable()
 });
 
 const updateProductSchema = z.object({
@@ -19,7 +20,8 @@ const updateProductSchema = z.object({
   quantity: z.coerce.number().int().min(0, 'Quantity must be an integer >= 0').optional(),
   minStock: z.coerce.number().int().min(0, 'Minimum stock must be an integer >= 0').optional(),
   categoryId: z.coerce.number().int().positive('Category ID must be a positive integer').optional(),
-  supplierId: z.coerce.number().int().positive('Supplier ID must be a positive integer').optional().nullable()
+  supplierId: z.coerce.number().int().positive('Supplier ID must be a positive integer').optional().nullable(),
+  imageUrl: z.string().url('Must be a valid URL').optional().nullable()
 });
 
 const queryProductSchema = z.object({
