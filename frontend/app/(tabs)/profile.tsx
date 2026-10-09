@@ -13,7 +13,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../src/components/AppHeader';
 import { useAuthStore } from '../../src/store/useAuthStore';
-import { authApi, API_BASE_URL } from '../../src/services/api';
+import { authApi } from '../../src/services/auth/apis';
+import { API_BASE_URL } from '../../src/services/apiClient';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
 export default function ProfileScreen() {

@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { InputField } from '../../src/components/InputField';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { authApi } from '../../src/services/api';
+import { authApi } from '../../src/services/auth/apis';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { COLORS } from '../../src/constants/theme';
 

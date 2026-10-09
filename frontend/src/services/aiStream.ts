@@ -1,4 +1,4 @@
-import { API_BASE_URL } from './api';
+import { API_BASE_URL } from './apiClient';
 import { useAuthStore } from '../store/useAuthStore';
 import { AIResponse, ReorderRecommendation } from '../types';
 

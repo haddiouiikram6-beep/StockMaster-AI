@@ -1,13 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  productApi,
-  stockMovementApi,
-  categoryApi,
-  supplierApi,
-  aiApi,
-  ProductQueryParams,
-  MovementQueryParams,
-} from '../services/api';
+import { productApi, ProductQueryParams } from '../services/products/apis';
+import { stockMovementApi, MovementQueryParams } from '../services/stockMovements/apis';
+import { categoryApi } from '../services/categories/apis';
+import { supplierApi } from '../services/suppliers/apis';
+import { aiApi } from '../services/ai/apis';
 import { Product, MovementType } from '../types';
 
 export const QUERY_KEYS = {
@@ -60,7 +56,7 @@ export const useUpdateProduct = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: number | string; payload: Partial<Product> }) =>
-      productApi.update(id, payload),
+      productApi.update({ id, payload }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.products });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.product(variables.id) });
