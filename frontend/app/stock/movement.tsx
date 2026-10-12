@@ -25,8 +25,8 @@ export default function StockMovementScreen() {
   const { data: productsData } = useProducts({ limit: 50 });
   const createMovementMutation = useCreateStockMovement();
 
-  const [selectedProductId, setSelectedProductId] = useState<number>(
-    params.productId ? Number(params.productId) : 1
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    params.productId ? Number(params.productId) : null
   );
   const [type, setType] = useState<MovementType>(params.type || 'IN');
   const [quantity, setQuantity] = useState('');
@@ -34,9 +34,21 @@ export default function StockMovementScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const products = productsData?.data || [];
+
+  React.useEffect(() => {
+    if (!selectedProductId && products.length > 0) {
+      setSelectedProductId(products[0].id);
+    }
+  }, [products, selectedProductId]);
+
   const selectedProduct = products.find((p) => p.id === selectedProductId);
 
   const handleSubmit = async () => {
+    if (!selectedProductId) {
+      setError('Please select a product.');
+      return;
+    }
+
     const qtyNum = parseInt(quantity, 10);
     if (!qtyNum || qtyNum <= 0) {
       setError('Please specify a valid quantity greater than 0.');
@@ -124,42 +136,48 @@ export default function StockMovementScreen() {
 
           {/* Product Picker */}
           <Text style={styles.label}>Select Product</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.productsScroll}
-          >
-            {products.map((p) => {
-              const isSelected = p.id === selectedProductId;
-              return (
-                <TouchableOpacity
-                  key={p.id}
-                  onPress={() => setSelectedProductId(p.id)}
-                  style={[
-                    styles.productChip,
-                    isSelected && styles.productChipSelected,
-                  ]}
-                >
-                  <Text
+          {products.length === 0 ? (
+            <Text style={{ color: COLORS.mutedText, marginBottom: 16, fontSize: 13 }}>
+              Aucun produit trouvé dans l'inventaire.
+            </Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.productsScroll}
+            >
+              {products.map((p) => {
+                const isSelected = p.id === selectedProductId;
+                return (
+                  <TouchableOpacity
+                    key={p.id}
+                    onPress={() => setSelectedProductId(p.id)}
                     style={[
-                      styles.productChipText,
-                      isSelected && styles.productChipTextSelected,
+                      styles.productChip,
+                      isSelected && styles.productChipSelected,
                     ]}
                   >
-                    {p.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.productChipStock,
-                      isSelected && styles.productChipStockSelected,
-                    ]}
-                  >
-                    ({p.quantity} units)
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                    <Text
+                      style={[
+                        styles.productChipText,
+                        isSelected && styles.productChipTextSelected,
+                      ]}
+                    >
+                      {p.name}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.productChipStock,
+                        isSelected && styles.productChipStockSelected,
+                      ]}
+                    >
+                      ({p.quantity} units)
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
 
           {/* Quantity & Reason */}
           <InputField

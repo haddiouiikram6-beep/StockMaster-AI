@@ -66,21 +66,19 @@ export default function DashboardScreen() {
   // Compute Statistics
   const stats = useMemo(() => {
     const products = productsData?.data || [];
-    const totalCount = productsData?.pagination?.total || products.length || 1248;
+    const totalCount = productsData?.pagination?.total ?? products.length;
 
     const lowStockCount =
-      lowStockData?.pagination?.total ||
-      products.filter((p) => Number(p.quantity) <= Number(p.minStock)).length ||
-      7;
+      lowStockData?.pagination?.total ??
+      (lowStockData?.data
+        ? lowStockData.data.length
+        : products.filter((p) => Number(p.quantity) <= Number(p.minStock)).length);
 
     const totalValueNum = products.reduce((acc, p) => {
       return acc + Number(p.price || 0) * Number(p.quantity || 0);
     }, 0);
 
-    const formattedValue =
-      totalValueNum > 0
-        ? formatCurrency(totalValueNum)
-        : formatCurrency(48200);
+    const formattedValue = formatCurrency(totalValueNum);
 
     return {
       totalProducts: totalCount.toLocaleString(),
@@ -89,83 +87,14 @@ export default function DashboardScreen() {
     };
   }, [productsData, lowStockData]);
 
-  const userName = user?.fullName?.split(' ')[0] || 'Ikram';
+  const userName = user?.fullName?.split(' ')[0] || 'Utilisateur';
 
-  // Fallback demo items if backend hasn't seeded yet
   const displayedLowStock = useMemo(() => {
-    if (lowStockData?.data && lowStockData.data.length > 0) {
-      return lowStockData.data.slice(0, 3);
-    }
-    return [
-      {
-        id: 2,
-        name: 'Wireless Ergonomic Mouse',
-        reference: 'PROD-MS-002',
-        quantity: 3,
-        minStock: 10,
-        price: 34.99,
-        categoryId: 1,
-        category: { id: 1, name: 'Electronics' },
-      },
-      {
-        id: 3,
-        name: 'USB-C Fast Cable 2m',
-        reference: 'PROD-HB-003',
-        quantity: 2,
-        minStock: 20,
-        price: 49.99,
-        categoryId: 1,
-        category: { id: 1, name: 'Electronics' },
-      },
-      {
-        id: 1,
-        name: 'Mechanical Keyboard Pro',
-        reference: 'PROD-KB-001',
-        quantity: 8,
-        minStock: 20,
-        price: 89.99,
-        categoryId: 1,
-        category: { id: 1, name: 'Electronics' },
-      },
-    ];
+    return lowStockData?.data?.slice(0, 3) || [];
   }, [lowStockData]);
 
   const displayedMovements = useMemo(() => {
-    if (movementsData?.data && movementsData.data.length > 0) {
-      return movementsData.data.slice(0, 3);
-    }
-    return [
-      {
-        id: 101,
-        productId: 3,
-        userId: 1,
-        type: 'IN' as const,
-        quantity: 20,
-        reason: 'Réapprovisionnement fournisseur',
-        date: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-        product: { id: 3, name: 'USB-C Multi-port Hub', reference: 'PROD-HB-003', price: 49.99, quantity: 22, minStock: 8, categoryId: 1 },
-      },
-      {
-        id: 102,
-        productId: 2,
-        userId: 2,
-        type: 'OUT' as const,
-        quantity: 12,
-        reason: 'Commande client #1042',
-        date: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
-        product: { id: 2, name: 'Bluetooth Headset', reference: 'PROD-MS-002', price: 34.99, quantity: 3, minStock: 10, categoryId: 1 },
-      },
-      {
-        id: 103,
-        productId: 1,
-        userId: 1,
-        type: 'IN' as const,
-        quantity: 15,
-        reason: 'Réapprovisionnement fournisseur',
-        date: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-        product: { id: 1, name: 'Fast C-to-C Cord', reference: 'PROD-KB-001', price: 89.99, quantity: 45, minStock: 10, categoryId: 1 },
-      },
-    ];
+    return movementsData?.data?.slice(0, 3) || [];
   }, [movementsData]);
 
   if (loadingProducts && !productsData && !refreshing) {
@@ -263,14 +192,21 @@ export default function DashboardScreen() {
         />
 
         <View style={styles.listSection}>
-          {displayedLowStock.map((prod) => (
-            <ProductRow
-              key={prod.id}
-              product={prod}
-              variant="compact"
-              onPress={() => router.push(`/products/${prod.id}`)}
-            />
-          ))}
+          {displayedLowStock.length > 0 ? (
+            displayedLowStock.map((prod) => (
+              <ProductRow
+                key={prod.id}
+                product={prod}
+                variant="compact"
+                onPress={() => router.push(`/products/${prod.id}`)}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.success} />
+              <Text style={styles.emptyText}>Tous les produits ont un niveau de stock adéquat</Text>
+            </View>
+          )}
         </View>
 
         {/* Recent Movements Section */}
@@ -281,9 +217,16 @@ export default function DashboardScreen() {
         />
 
         <View style={styles.listSection}>
-          {displayedMovements.map((movement) => (
-            <MovementRow key={movement.id} movement={movement} />
-          ))}
+          {displayedMovements.length > 0 ? (
+            displayedMovements.map((movement) => (
+              <MovementRow key={movement.id} movement={movement} />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="time-outline" size={20} color={COLORS.secondaryText} />
+              <Text style={styles.emptyText}>Aucun mouvement récent enregistré</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -350,5 +293,22 @@ const styles = StyleSheet.create({
   },
   listSection: {
     marginTop: 2,
+  },
+  emptyContainer: {
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 10,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: COLORS.secondaryText,
+    flex: 1,
   },
 });

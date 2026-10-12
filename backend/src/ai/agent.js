@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import env from '../config/env.js';
 import { SYSTEM_PROMPT } from './systemPrompt.js';
-import { deepSeekTools, openAiTools, tools } from './tools.js';
+import { tools } from './tools.js';
 import ToolExecutor from './toolExecutor.js';
 import { sanitizeOutput } from './guardrails.js';
 import { Conversation, Message } from '../models/index.js';
@@ -258,80 +258,70 @@ Respond ONLY with a valid JSON object matching this schema:
       const activeClient = this.getClient();
 
       if (!activeClient) {
-        // Fallback simulation when no API key configured or offline
-        const fallbackResult = await this.handleLocalSimulation({
-          userMessage: message,
-          userRole,
-          onChunk,
-          stream
-        });
-        finalReply = fallbackResult.reply;
-        toolsExecuted.push(...fallbackResult.toolsExecuted);
-        products = fallbackResult.products || [];
-        createdProduct = fallbackResult.createdProduct || null;
-        recommendations = fallbackResult.recommendations || [];
-      } else {
-        // -------------------------------------------------------------
-        // Phase 1: Intent Understanding via Pre-prompt
-        // -------------------------------------------------------------
-        console.log("Analyzing user intent with pre-prompt for query:", message);
-        const intentResult = await this.analyzeIntent({
-          userMessage: message,
-          history,
-          client: activeClient
-        });
+        throw new Error('DeepSeek API client is not configured. Please define DEEPSEEK_API_KEY in your environment.');
+      }
 
-        console.log("Intent recognized:", intentResult.userIntent, "Tools planned:", intentResult.toolsRequired);
+      // -------------------------------------------------------------
+      // Phase 1: Intent Understanding via Pre-prompt
+      // -------------------------------------------------------------
+      console.log("Analyzing user intent with pre-prompt for query:", message);
+      const intentResult = await this.analyzeIntent({
+        userMessage: message,
+        history,
+        client: activeClient
+      });
 
-        // -------------------------------------------------------------
-        // Phase 2: Tool Execution
-        // -------------------------------------------------------------
-        const toolExecutionResults = [];
+      console.log("Intent recognized:", intentResult.userIntent, "Tools planned:", intentResult.toolsRequired);
 
-        if (intentResult.toolsRequired && intentResult.toolsRequired.length > 0) {
-          for (const plannedTool of intentResult.toolsRequired) {
-            const toolName = plannedTool.name;
-            const toolArgs = plannedTool.args || {};
-            toolsRequested.push(toolName);
+      // -------------------------------------------------------------
+      // Phase 2: Tool Execution
+      // -------------------------------------------------------------
+      const toolExecutionResults = [];
 
-            try {
-              const execResult = await ToolExecutor.execute(toolName, toolArgs, { role: userRole, userId });
-              toolsExecuted.push(toolName);
+      if (intentResult.toolsRequired && intentResult.toolsRequired.length > 0) {
+        for (const plannedTool of intentResult.toolsRequired) {
+          const toolName = plannedTool.name;
+          const toolArgs = plannedTool.args || {};
+          toolsRequested.push(toolName);
 
-              toolExecutionResults.push({
-                toolName,
-                args: toolArgs,
-                result: execResult
-              });
+          try {
+            const execResult = await ToolExecutor.execute(toolName, toolArgs, { role: userRole, userId });
+            toolsExecuted.push(toolName);
 
-              // Extract structured data for frontend UI
-              if (toolName === 'createProduct' && execResult.product) {
-                createdProduct = execResult.product;
-              }
-              if ((toolName === 'vectorSearchProducts' || toolName === 'searchProducts') && Array.isArray(execResult.products)) {
-                products.push(...execResult.products);
-              }
-              if (toolName === 'getLowStockProducts' && Array.isArray(execResult.products)) {
-                products.push(...execResult.products);
-              }
-              if (toolName === 'recommendReorder' && Array.isArray(execResult.recommendations)) {
-                recommendations.push(...execResult.recommendations);
-              }
-            } catch (tErr) {
-              logger.error(`Error executing planned tool ${toolName}:`, tErr);
-              toolExecutionResults.push({
-                toolName,
-                args: toolArgs,
-                error: tErr.message
-              });
+            toolExecutionResults.push({
+              toolName,
+              args: toolArgs,
+              result: execResult
+            });
+
+            // Extract structured data for frontend UI
+            if (toolName === 'createProduct' && execResult.product) {
+              createdProduct = execResult.product;
             }
+            if ((toolName === 'vectorSearchProducts' || toolName === 'searchProducts') && Array.isArray(execResult.products)) {
+              products.push(...execResult.products);
+            }
+            if (toolName === 'getLowStockProducts' && Array.isArray(execResult.products)) {
+              products.push(...execResult.products);
+            }
+            if (toolName === 'recommendReorder' && Array.isArray(execResult.recommendations)) {
+              recommendations.push(...execResult.recommendations);
+            }
+          } catch (tErr) {
+            logger.error(`Error executing planned tool ${toolName}:`, tErr);
+            toolExecutionResults.push({
+              toolName,
+              args: toolArgs,
+              error: tErr.message
+            });
           }
         }
+      }
 
-        // -------------------------------------------------------------
-        // Phase 3: Final Response Generation with Full Context & Grounding
-        // -------------------------------------------------------------
-        const synthesisSystemPrompt = `${SYSTEM_PROMPT}
+      // -------------------------------------------------------------
+      // Phase 3: Final Response Generation with Full Context & Grounding
+      // -------------------------------------------------------------
+      const synthesisSystemPrompt = `${SYSTEM_PROMPT}
 
 You have performed intent analysis and executed the required tools for warehouse operations.
 Now, generate a clear, polite, structured final response to the user in French:
@@ -343,39 +333,38 @@ Now, generate a clear, polite, structured final response to the user in French:
 Executed Tool Data:
 ${JSON.stringify(toolExecutionResults, null, 2)}`;
 
-        const finalMessagesPayload = [
-          { role: 'system', content: synthesisSystemPrompt },
-          ...history.map(m => ({
-            role: m.role === 'tool' ? 'system' : m.role,
-            content: m.textContent
-          })),
-          {
-            role: 'system',
-            content: `User Intent: ${intentResult.userIntent}\nTool Execution Results: ${JSON.stringify(toolExecutionResults)}`
-          }
-        ];
-
-        if (stream && typeof onChunk === 'function') {
-          const streamResponse = await activeClient.chat.completions.create({
-            model: this.model,
-            messages: finalMessagesPayload,
-            stream: true
-          });
-
-          for await (const chunk of streamResponse) {
-            const delta = chunk.choices[0]?.delta?.content || '';
-            if (delta) {
-              finalReply += delta;
-              onChunk(delta);
-            }
-          }
-        } else {
-          const finalCompletion = await activeClient.chat.completions.create({
-            model: this.model,
-            messages: finalMessagesPayload
-          });
-          finalReply = finalCompletion.choices[0].message.content || '';
+      const finalMessagesPayload = [
+        { role: 'system', content: synthesisSystemPrompt },
+        ...history.map(m => ({
+          role: m.role === 'tool' ? 'system' : m.role,
+          content: m.textContent
+        })),
+        {
+          role: 'system',
+          content: `User Intent: ${intentResult.userIntent}\nTool Execution Results: ${JSON.stringify(toolExecutionResults)}`
         }
+      ];
+
+      if (stream && typeof onChunk === 'function') {
+        const streamResponse = await activeClient.chat.completions.create({
+          model: this.model,
+          messages: finalMessagesPayload,
+          stream: true
+        });
+
+        for await (const chunk of streamResponse) {
+          const delta = chunk.choices[0]?.delta?.content || '';
+          if (delta) {
+            finalReply += delta;
+            onChunk(delta);
+          }
+        }
+      } else {
+        const finalCompletion = await activeClient.chat.completions.create({
+          model: this.model,
+          messages: finalMessagesPayload
+        });
+        finalReply = finalCompletion.choices[0].message.content || '';
       }
 
       // Sanitize final text
@@ -431,83 +420,6 @@ ${JSON.stringify(toolExecutionResults, null, 2)}`;
     }
   }
 
-  /**
-   * Local intelligent handler when DEEPSEEK_API_KEY is not configured or in offline test mode
-   */
-  async handleLocalSimulation({ userMessage, userRole, onChunk, stream }) {
-    const lower = userMessage.toLowerCase();
-    const toolsExecuted = [];
-    let reply = '';
-    let products = [];
-    let createdProduct = null;
-    let recommendations = [];
-
-    const isReorder = lower.includes('reorder') || lower.includes('replenish') || lower.includes('réapprovisionnement') || lower.includes('نكوموندي') || (lower.includes('order') && lower.includes('what'));
-
-    if (isReorder) {
-      toolsExecuted.push('recommendReorder');
-      const data = await ToolExecutor.execute('recommendReorder', { limit: 10 }, { role: userRole });
-      recommendations = data.recommendations || [];
-      reply = `📋 **Reorder Recommendations & Replenishment Plan**\n\nJ'ai analysé l'état actuel de votre stock. Voici les réapprovisionnements recommandés avec les quantités cibles et les coûts estimés :`;
-    } else if (
-      (lower.includes('créer') || lower.includes('crée') || lower.includes('create') || lower.includes('ajoute')) &&
-      (lower.includes('produit') || lower.includes('product') || lower.includes('article'))
-    ) {
-      toolsExecuted.push('createProduct');
-      const data = await ToolExecutor.execute('createProduct', {
-        name: 'Écran Professionnel 4K Ultra',
-        price: 3499.00,
-        quantity: 15,
-        minStock: 5,
-        categoryName: 'Électronique',
-        description: 'Écran ultra haute définition pour poste de travail'
-      }, { role: userRole });
-
-      createdProduct = data.product;
-      reply = `✨ **Nouveau Produit Créé avec Succès**\n\nLe produit **${createdProduct.name}** (SKU: \`${createdProduct.reference}\`) a été créé et indexé dans la base de données vectorielle **Pinecone** au prix de **${createdProduct.price} DH**.`;
-    } else if (
-      (lower.includes('low') && (lower.includes('stock') || lower.includes('inventory'))) ||
-      lower.includes('alert') ||
-      lower.includes('deficit') ||
-      lower.includes('rupture') ||
-      lower.includes('ناقص') ||
-      lower.includes('خصاص')
-    ) {
-      toolsExecuted.push('getLowStockProducts');
-      const data = await ToolExecutor.execute('getLowStockProducts', { limit: 10 }, { role: userRole });
-      products = data.products || [];
-      reply = `⚠️ **Low Stock Alert**: Found **${data.count}** product(s) below minimum stock levels`;
-    } else if (lower.includes('cherche') || lower.includes('trouve') || lower.includes('search') || lower.includes('vector') || lower.includes('pinecone')) {
-      toolsExecuted.push('vectorSearchProducts');
-      const data = await ToolExecutor.execute('vectorSearchProducts', { query: userMessage, limit: 10 }, { role: userRole });
-      products = data.products || [];
-      reply = `🔍 **Recherche Vectorielle Pinecone** : Trouvé **${data.count}** produit(s) correspondant à votre recherche.`;
-    } else if (lower.includes('movement') || lower.includes('history') || lower.includes('recent')) {
-      toolsExecuted.push('getStockMovements');
-      await ToolExecutor.execute('getStockMovements', { limit: 5 }, { role: userRole });
-      reply = `📦 **Recent Stock Movements**`;
-    } else if (lower.includes('supplier') || lower.includes('vendor')) {
-      toolsExecuted.push('getSupplierInfo');
-      await ToolExecutor.execute('getSupplierInfo', { supplierId: 1 }, { role: userRole });
-      reply = `🏢 **Supplier Details**`;
-    } else if (lower.includes('keyboard') || lower.includes('mouse') || lower.includes('product') || lower.includes('stock')) {
-      toolsExecuted.push('searchProducts');
-      const data = await ToolExecutor.execute('searchProducts', { query: 'keyboard' }, { role: userRole });
-      products = data.products || [];
-      reply = `🔍 **Found products**`;
-    } else {
-      reply = `Hello! I am StockMaster AI. Comment puis-je vous aider avec votre inventaire ?`;
-    }
-
-    if (stream && typeof onChunk === 'function') {
-      const words = reply.split(' ');
-      for (const word of words) {
-        onChunk(word + ' ');
-      }
-    }
-
-    return { reply, toolsExecuted, products, createdProduct, recommendations };
-  }
 }
 
 const agentInstance = new AIAgent();

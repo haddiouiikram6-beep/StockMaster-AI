@@ -23,18 +23,19 @@ export default function ProfileScreen() {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  const displayName = user?.fullName || 'Ikram Mansouri';
-  const displayEmail = user?.email || 'manager@stockmaster.com';
+  const displayName = user?.fullName || 'Utilisateur';
+  const displayEmail = user?.email || '';
   const displayRole = user?.role
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-    : 'Manager de magasin';
+    : 'Employé';
 
   const initials = displayName
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .join('')
     .substring(0, 2)
-    .toUpperCase() || 'IK';
+    .toUpperCase() || 'U';
 
   const handleLogout = () => {
     Alert.alert('Déconnexion', 'Êtes-vous sûr de vouloir vous déconnecter de StockMaster-AI ?', [

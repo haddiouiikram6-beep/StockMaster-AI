@@ -55,68 +55,9 @@ export default function ProductsScreen() {
   const { data: categoriesData } = useCategories();
   const createProductMutation = useCreateProduct();
 
-  // Reference demo items fallback
+  // Real products from API
   const rawProducts: Product[] = useMemo(() => {
-    if (productsData?.data && productsData.data.length > 0) {
-      return productsData.data;
-    }
-    return [
-      {
-        id: 1,
-        name: 'Logitech MX Master 3S',
-        reference: 'SKU-9821',
-        category: { id: 1, name: 'Electronics' },
-        categoryId: 1,
-        quantity: 42,
-        minStock: 15,
-        price: 99.00,
-        description: 'Wireless Performance Mouse - Graphite',
-      },
-      {
-        id: 2,
-        name: 'Ergonomic Desk Chair',
-        reference: 'SKU-4420',
-        category: { id: 2, name: 'Furniture' },
-        categoryId: 2,
-        quantity: 5,
-        minStock: 10,
-        price: 249.99,
-        description: 'Breathable mesh chair with lumbar support',
-      },
-      {
-        id: 3,
-        name: 'Ultra HD 4K Monitor',
-        reference: 'SKU-7710',
-        category: { id: 1, name: 'Cables & Displays' },
-        categoryId: 1,
-        quantity: 1,
-        minStock: 8,
-        price: 389.00,
-        description: '27-inch IPS UHD 4K HDR Monitor',
-      },
-      {
-        id: 4,
-        name: 'Anker USB-C Power Bank',
-        reference: 'SKU-4810',
-        category: { id: 1, name: 'Power & Accessories' },
-        categoryId: 1,
-        quantity: 18,
-        minStock: 5,
-        price: 59.99,
-        description: '20,000mAh portable charger with 65W PD',
-      },
-      {
-        id: 5,
-        name: 'Aluminum Laptop Stand',
-        reference: 'SKU-3320',
-        category: { id: 2, name: 'Workspace' },
-        categoryId: 2,
-        quantity: 15,
-        minStock: 6,
-        price: 45.00,
-        description: 'Adjustable ergonomic aluminum laptop riser',
-      },
-    ];
+    return productsData?.data || [];
   }, [productsData]);
 
   // Counts for filter chips
@@ -161,7 +102,7 @@ export default function ProductsScreen() {
       (acc, p) => acc + Number(p.price || 0) * Number(p.quantity || 0),
       0
     );
-    return sum > 0 ? formatCurrency(sum) : formatCurrency(40290);
+    return formatCurrency(sum);
   }, [rawProducts]);
 
   const handleSelectImage = async () => {

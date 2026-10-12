@@ -28,7 +28,6 @@ export default function AIAssistantScreen() {
   const [streamingText, setStreamingText] = useState('');
   const [streamingTools, setStreamingTools] = useState<string[]>([]);
 
-  // Preload initial messages from reference design so screen starts visually stunning
   const [messages, setMessages] = useState<
     Array<{
       message: Message;
@@ -36,55 +35,7 @@ export default function AIAssistantScreen() {
       products?: any[];
       createdProduct?: any;
     }>
-  >([
-    {
-      message: {
-        role: 'user',
-        content: 'Quels produits sont en rupture de stock ou presque ?',
-      },
-    },
-    {
-      message: {
-        role: 'assistant',
-        content:
-          '3 produits sont actuellement en dessous de leur niveau de stock minimum :\n\n• Hub USB-C multi-ports 7-en-1 (2 / 8 unités) [Critique]\n• Chaise de bureau ergonomique (5 / 10 unités) [Stock faible]\n• Souris ergonomique sans fil (3 / 10 unités) [Stock faible]',
-        toolsExecuted: ['getLowStockProducts'],
-      },
-    },
-    {
-      message: {
-        role: 'user',
-        content: 'Que dois-je recommander ?',
-      },
-    },
-    {
-      message: {
-        role: 'assistant',
-        content: 'Voici mes recommandations de réapprovisionnement basées sur votre vitesse de vente actuelle et les délais des fournisseurs :',
-        toolsExecuted: ['recommendReorder'],
-      },
-      recommendations: [
-        {
-          productName: 'USB-C 4K Monitor Cable 2m',
-          currentStock: 2,
-          minStock: 20,
-          recommendedOrder: 50,
-          priority: 'CRITICAL',
-          estimatedCost: 450.0,
-          supplier: 'TechCorp Logistics',
-        },
-        {
-          productName: 'Ergonomic Desk Mesh Chair',
-          currentStock: 5,
-          minStock: 10,
-          recommendedOrder: 15,
-          priority: 'HIGH',
-          estimatedCost: 1250.0,
-          supplier: 'Global Office Essentials',
-        },
-      ],
-    },
-  ]);
+  >([]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -199,6 +150,18 @@ export default function AIAssistantScreen() {
           contentContainerStyle={styles.chatScroll}
           showsVerticalScrollIndicator={false}
         >
+          {messages.length === 0 && !isGenerating && (
+            <View style={styles.welcomeContainer}>
+              <View style={styles.welcomeIconBox}>
+                <Ionicons name="sparkles" size={32} color={COLORS.primaryBlue} />
+              </View>
+              <Text style={styles.welcomeTitle}>Comment puis-je vous aider ?</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Posez vos questions sur l'inventaire en temps réel, lancez une recherche vectorielle ou demandez des recommandations de réapprovisionnement.
+              </Text>
+            </View>
+          )}
+
           {messages.map((item, index) => (
             <ChatBubble
               key={index}
@@ -359,5 +322,33 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     backgroundColor: '#CBD5E1',
+  },
+  welcomeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+  },
+  welcomeIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.infoBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    color: COLORS.secondaryText,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

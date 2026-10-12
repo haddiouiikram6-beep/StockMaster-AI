@@ -56,68 +56,19 @@ export default function ProductDetailsScreen() {
 
   const createMovementMutation = useCreateStockMovement();
 
-  // Reference product fallback
-  const product = useMemo(() => {
-    if (productData?.data) {
-      return productData.data;
-    }
-    return {
-      id: Number(id) || 1,
-      name: 'Logitech MX Master 3S',
-      reference: 'SKU-9821',
-      description: 'Wireless Performance Mouse - Graphite',
-      price: 99.0,
-      quantity: 42,
-      minStock: 15,
-      categoryId: 1,
-      category: { id: 1, name: 'Electronics & Peripherals' },
-      supplier: { id: 1, name: 'Logitech International S.A.' },
-    };
-  }, [productData, id]);
+  // Real product from API
+  const product = productData?.data;
 
   const stockValue = useMemo(() => {
+    if (!product) return formatCurrency(0);
     const val = Number(product.price || 0) * Number(product.quantity || 0);
     return formatCurrency(val);
   }, [product]);
 
-  // Demo movements fallback for product
+  // Real movements from API
   const displayedMovements = useMemo(() => {
-    if (movementsData?.data && movementsData.data.length > 0) {
-      return movementsData.data;
-    }
-    return [
-      {
-        id: 201,
-        productId: Number(id) || 1,
-        userId: 1,
-        type: 'IN' as const,
-        quantity: 20,
-        reason: 'Réapprovisionnement fournisseur',
-        date: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
-        product,
-      },
-      {
-        id: 202,
-        productId: Number(id) || 1,
-        userId: 2,
-        type: 'OUT' as const,
-        quantity: 5,
-        reason: 'Commande client #1084',
-        date: new Date(Date.now() - 28 * 3600 * 1000).toISOString(),
-        product,
-      },
-      {
-        id: 203,
-        productId: Number(id) || 1,
-        userId: 1,
-        type: 'OUT' as const,
-        quantity: 2,
-        reason: 'Retour endommagé / perte',
-        date: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
-        product,
-      },
-    ];
-  }, [movementsData, id, product]);
+    return movementsData?.data || [];
+  }, [movementsData]);
 
   const openMovementModal = (type: MovementType) => {
     setMovementType(type);
@@ -128,6 +79,8 @@ export default function ProductDetailsScreen() {
   };
 
   const handleConfirmMovement = async () => {
+    if (!product) return;
+
     const quantityNum = parseInt(qty, 10);
     if (!quantityNum || quantityNum <= 0) {
       setMovementError('Veuillez entrer une quantité positive valide.');
@@ -163,7 +116,7 @@ export default function ProductDetailsScreen() {
     }
   };
 
-  if (loadingProduct && !productData) {
+  if (loadingProduct && !product) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <LoadingState message="Chargement des détails du produit..." />
@@ -171,13 +124,15 @@ export default function ProductDetailsScreen() {
     );
   }
 
-  if (isError && !productData) {
+  if ((isError || !product) && !loadingProduct) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <ErrorState message="Impossible de charger les détails du produit." onRetry={refetch} />
       </SafeAreaView>
     );
   }
+
+  if (!product) return null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -323,9 +278,15 @@ export default function ProductDetailsScreen() {
         </View>
 
         <View style={styles.movementsList}>
-          {displayedMovements.map((item) => (
-            <MovementRow key={item.id} movement={item} />
-          ))}
+          {displayedMovements.length > 0 ? (
+            displayedMovements.map((item) => (
+              <MovementRow key={item.id} movement={item} />
+            ))
+          ) : (
+            <Text style={{ color: COLORS.secondaryText, fontSize: 13, paddingVertical: 14, textAlign: 'center' }}>
+              Aucun mouvement enregistré pour ce produit.
+            </Text>
+          )}
         </View>
 
         {/* Prediction Pill Note */}
