@@ -1,144 +1,36 @@
-import { Supplier, Product } from '../models/index.js';
+import supplierService from '../services/supplier.service.js';
+import { successResponse, paginatedResponse } from '../utils/response.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
 /**
- * Get all suppliers
- * GET /api/suppliers
+ * Supplier Controller
+ * Handles HTTP requests and delegates business logic to SupplierService
  */
-const getAllSuppliers = async (req, res, next) => {
-  try {
-    const page = parseInt(req.query.page || '1', 10);
-    const limit = parseInt(req.query.limit || '50', 10);
-    const offset = (page - 1) * limit;
 
-    const { count, rows } = await Supplier.findAndCountAll({
-      offset,
-      limit,
-      order: [['name', 'ASC']]
-    });
+export const getAllSuppliers = asyncHandler(async (req, res) => {
+  const { rows, pagination } = await supplierService.getAll(req.query);
+  return paginatedResponse(res, rows, pagination);
+});
 
-    res.status(200).json({
-      success: true,
-      data: rows,
-      pagination: {
-        page,
-        limit,
-        total: count,
-        totalPages: Math.ceil(count / limit) || 1
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+export const getSupplierById = asyncHandler(async (req, res) => {
+  const supplier = await supplierService.getById(req.params.id);
+  return successResponse(res, supplier);
+});
 
-/**
- * Get supplier by ID
- * GET /api/suppliers/:id
- */
-const getSupplierById = async (req, res, next) => {
-  try {
-    const supplier = await Supplier.findByPk(req.params.id, {
-      include: [{ model: Product, as: 'products', attributes: ['id', 'name', 'reference', 'price', 'quantity'] }]
-    });
+export const createSupplier = asyncHandler(async (req, res) => {
+  const supplier = await supplierService.create(req.body);
+  return successResponse(res, supplier, null, 201);
+});
 
-    if (!supplier) {
-      return res.status(404).json({
-        success: false,
-        message: 'Supplier not found.'
-      });
-    }
+export const updateSupplier = asyncHandler(async (req, res) => {
+  const supplier = await supplierService.update(req.params.id, req.body);
+  return successResponse(res, supplier);
+});
 
-    res.status(200).json({
-      success: true,
-      data: supplier
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Create a new supplier
- * POST /api/suppliers
- */
-const createSupplier = async (req, res, next) => {
-  try {
-    const { name, phone, email } = req.body;
-
-    const supplier = await Supplier.create({ name, phone, email });
-
-    res.status(201).json({
-      success: true,
-      data: supplier
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Update an existing supplier
- * PUT /api/suppliers/:id
- */
-const updateSupplier = async (req, res, next) => {
-  try {
-    const supplier = await Supplier.findByPk(req.params.id);
-    if (!supplier) {
-      return res.status(404).json({
-        success: false,
-        message: 'Supplier not found.'
-      });
-    }
-
-    const { name, phone, email } = req.body;
-
-    await supplier.update({
-      name: name !== undefined ? name : supplier.name,
-      phone: phone !== undefined ? phone : supplier.phone,
-      email: email !== undefined ? email : supplier.email
-    });
-
-    res.status(200).json({
-      success: true,
-      data: supplier
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Delete a supplier
- * DELETE /api/suppliers/:id
- */
-const deleteSupplier = async (req, res, next) => {
-  try {
-    const supplier = await Supplier.findByPk(req.params.id);
-    if (!supplier) {
-      return res.status(404).json({
-        success: false,
-        message: 'Supplier not found.'
-      });
-    }
-
-    await supplier.destroy();
-
-    res.status(200).json({
-      success: true,
-      message: 'Supplier deleted successfully.'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export {
-  getAllSuppliers,
-  getSupplierById,
-  createSupplier,
-  updateSupplier,
-  deleteSupplier
-};
+export const deleteSupplier = asyncHandler(async (req, res) => {
+  await supplierService.delete(req.params.id);
+  return successResponse(res, null, 'Supplier deleted successfully.');
+});
 
 export default {
   getAllSuppliers,

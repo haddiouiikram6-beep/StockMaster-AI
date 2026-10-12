@@ -1,10 +1,13 @@
 import { verifyAccessToken } from '../utils/jwt.js';
 import { User } from '../models/index.js';
+import env from '../config/env.js';
 
 /**
- * Authentication middleware to verify JWT Bearer token
+ * Authentication middleware to verify JWT Bearer token.
+ * In development, also supports quick developer tokens ('dev-admin', 'dev-manager', 'dev-employee')
+ * for effortless API exploration via Swagger UI, cURL, or frontend testing.
  */
-const authenticate = async (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,7 +17,38 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(' ')[1]?.trim();
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Token string is empty.'
+      });
+    }
+
+    // Developer convenience shortcut tokens (available outside production)
+    if (env.NODE_ENV !== 'production') {
+      if (token === 'dev-admin') {
+        const adminUser = await User.findOne({ where: { role: 'admin' } });
+        if (adminUser) {
+          req.user = adminUser;
+          return next();
+        }
+      } else if (token === 'dev-manager') {
+        const managerUser = await User.findOne({ where: { role: 'manager' } });
+        if (managerUser) {
+          req.user = managerUser;
+          return next();
+        }
+      } else if (token === 'dev-employee') {
+        const employeeUser = await User.findOne({ where: { role: 'employee' } });
+        if (employeeUser) {
+          req.user = employeeUser;
+          return next();
+        }
+      }
+    }
+
     let decoded;
     try {
       decoded = verifyAccessToken(token);
@@ -50,7 +84,7 @@ const authenticate = async (req, res, next) => {
  * Role-Based Access Control (RBAC) middleware
  * @param  {...string} roles Allowed roles (e.g. 'admin', 'manager', 'employee')
  */
-const authorize = (...roles) => {
+export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -68,11 +102,6 @@ const authorize = (...roles) => {
 
     next();
   };
-};
-
-export {
-  authenticate,
-  authorize
 };
 
 export default {

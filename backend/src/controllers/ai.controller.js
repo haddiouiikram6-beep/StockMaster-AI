@@ -1,23 +1,24 @@
-import aiAgent from '../ai/agent.js';
-import { Conversation, Message } from '../models/index.js';
+import aiService from '../services/ai.service.js';
+import { successResponse } from '../utils/response.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
 /**
- * AI Chat endpoint supporting standard JSON and SSE Streaming
- * POST /api/ai/chat
+ * AI Controller
+ * Handles HTTP requests and delegates AI chat / conversation queries to AIService
  */
-const chat = async (req, res, next) => {
+
+export const chat = async (req, res, next) => {
   const { conversationId, message, stream: requestedStream } = req.body;
   const isSSE = requestedStream === true || req.headers.accept === 'text/event-stream';
 
   if (isSSE) {
-    // Setup SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders?.();
 
     try {
-      const result = await aiAgent.chat({
+      const result = await aiService.chat({
         userId: req.user.id,
         userRole: req.user.role,
         conversationId,
@@ -44,9 +45,8 @@ const chat = async (req, res, next) => {
     }
   }
 
-  // Standard JSON response
   try {
-    const result = await aiAgent.chat({
+    const result = await aiService.chat({
       userId: req.user.id,
       userRole: req.user.role,
       conversationId,
@@ -54,84 +54,24 @@ const chat = async (req, res, next) => {
       stream: false
     });
 
-    res.status(200).json({
-      success: true,
-      data: {
-        ...result,
-        answer: result.reply
-      }
+    return successResponse(res, {
+      ...result,
+      answer: result.reply
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * Get all conversations for the authenticated user
- * GET /api/ai/conversations
- */
-const getConversations = async (req, res, next) => {
-  try {
-    const conversations = await Conversation.findAll({
-      where: { userId: req.user.id },
-      order: [['updatedAt', 'DESC']],
-      include: [
-        {
-          model: Message,
-          as: 'messages',
-          limit: 1,
-          order: [['createdAt', 'DESC']]
-        }
-      ]
-    });
+export const getConversations = asyncHandler(async (req, res) => {
+  const conversations = await aiService.getConversations(req.user.id);
+  return successResponse(res, conversations);
+});
 
-    res.status(200).json({
-      success: true,
-      data: conversations
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Get a specific conversation with all message history
- * GET /api/ai/conversations/:id
- */
-const getConversationById = async (req, res, next) => {
-  try {
-    const conversation = await Conversation.findOne({
-      where: { id: req.params.id, userId: req.user.id },
-      include: [
-        {
-          model: Message,
-          as: 'messages',
-          order: [['createdAt', 'ASC']]
-        }
-      ]
-    });
-
-    if (!conversation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Conversation not found.'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: conversation
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export {
-  chat,
-  getConversations,
-  getConversationById
-};
+export const getConversationById = asyncHandler(async (req, res) => {
+  const conversation = await aiService.getConversationById(req.params.id, req.user.id);
+  return successResponse(res, conversation);
+});
 
 export default {
   chat,

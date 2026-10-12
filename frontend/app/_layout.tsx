@@ -47,6 +47,17 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="products/create"
+            options={{
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.95, 1.0],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+              animation: 'slide_from_bottom',
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
             name="stock/movement"
             options={{
               presentation: 'modal',

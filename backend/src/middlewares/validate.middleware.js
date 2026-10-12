@@ -3,7 +3,7 @@
  * @param {import('zod').ZodSchema} schema 
  * @param {'body' | 'query' | 'params'} source 
  */
-const validate = (schema, source = 'body') => {
+export const validate = (schema, source = 'body') => {
   return async (req, res, next) => {
     try {
       const parsed = await schema.parseAsync(req[source]);
@@ -25,8 +25,6 @@ const validate = (schema, source = 'body') => {
           message: err.message
         }));
 
-        console.error('VALIDATION FAILED ON ENDPOINT:', req.originalUrl, 'PAYLOAD:', req[source], 'ERRORS:', formattedErrors);
-
         return res.status(422).json({
           success: false,
           message: 'Validation failed',
@@ -43,5 +41,4 @@ const validate = (schema, source = 'body') => {
   };
 };
 
-export { validate };
 export default validate;

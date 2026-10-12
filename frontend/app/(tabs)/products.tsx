@@ -7,23 +7,16 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Modal,
-  Alert,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import { uploadProductImage } from '../../src/services/cloudinaryService';
 import { Ionicons } from '@expo/vector-icons';
 import { SearchBar } from '../../src/components/SearchBar';
 import { FilterChip } from '../../src/components/FilterChip';
 import { ProductRow } from '../../src/components/ProductRow';
 import { LoadingState } from '../../src/components/LoadingState';
 import { EmptyState } from '../../src/components/EmptyState';
-import { InputField } from '../../src/components/InputField';
-import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { useProducts, useCreateProduct, useCategories } from '../../src/hooks/useQueries';
+import { useProducts } from '../../src/hooks/useQueries';
 import { Product } from '../../src/types';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
@@ -32,18 +25,6 @@ export default function ProductsScreen() {
 
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'LOW' | 'OUT'>('ALL');
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  // New product form state
-  const [newName, setNewName] = useState('');
-  const [newRef, setNewRef] = useState('');
-  const [newPrice, setNewPrice] = useState('');
-  const [newQty, setNewQty] = useState('');
-  const [newMinStock, setNewMinStock] = useState('5');
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const {
     data: productsData,
@@ -51,9 +32,6 @@ export default function ProductsScreen() {
     refetch,
     isRefetching,
   } = useProducts({ limit: 100 });
-
-  const { data: categoriesData } = useCategories();
-  const createProductMutation = useCreateProduct();
 
   // Real products from API
   const rawProducts: Product[] = useMemo(() => {
@@ -70,110 +48,40 @@ export default function ProductsScreen() {
     return { total, low, out };
   }, [rawProducts]);
 
-  // Filtered products
+  // Filter and search
   const filteredProducts = useMemo(() => {
-    return rawProducts.filter((item) => {
-      // Search matching
-      const matchesSearch =
-        search.trim() === '' ||
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        item.reference.toLowerCase().includes(search.toLowerCase()) ||
-        item.category?.name?.toLowerCase().includes(search.toLowerCase());
+    let result = rawProducts;
 
-      if (!matchesSearch) return false;
+    if (activeFilter === 'LOW') {
+      result = result.filter(
+        (p) => Number(p.quantity) > 0 && Number(p.quantity) <= Number(p.minStock)
+      );
+    } else if (activeFilter === 'OUT') {
+      result = result.filter((p) => Number(p.quantity) === 0);
+    }
 
-      // Filter chip matching
-      const qty = Number(item.quantity);
-      const min = Number(item.minStock);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.reference.toLowerCase().includes(q) ||
+          (p.category && p.category.name.toLowerCase().includes(q))
+      );
+    }
 
-      if (activeFilter === 'LOW') {
-        return qty <= min;
-      }
-      if (activeFilter === 'OUT') {
-        return qty === 0;
-      }
-      return true;
-    });
-  }, [rawProducts, search, activeFilter]);
+    return result;
+  }, [rawProducts, activeFilter, search]);
 
-  // Valuation summary stats
-  const totalValuation = useMemo(() => {
-    const sum = rawProducts.reduce(
-      (acc, p) => acc + Number(p.price || 0) * Number(p.quantity || 0),
+  // Quick stats: Total stock items and total value
+  const stats = useMemo(() => {
+    const totalItems = rawProducts.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+    const totalValue = rawProducts.reduce(
+      (sum, p) => sum + (Number(p.quantity) || 0) * (Number(p.price) || 0),
       0
     );
-    return formatCurrency(sum);
+    return { totalItems, totalValue };
   }, [rawProducts]);
-
-  const handleSelectImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      
-      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-        setFormError('L’image ne doit pas dépasser 5 Mo.');
-        return;
-      }
-
-      const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-      if (asset.mimeType && !validTypes.includes(asset.mimeType)) {
-        setFormError('Format d’image non pris en charge.');
-        return;
-      }
-      
-      setFormError(null);
-      setSelectedImage(asset);
-    }
-  };
-
-  const handleCreateProduct = async () => {
-    if (!newName.trim() || !newRef.trim() || !newPrice.trim()) {
-      setFormError('Veuillez remplir le nom du produit, la référence SKU et le prix.');
-      return;
-    }
-
-    try {
-      setFormError(null);
-      setIsUploading(true);
-
-      let uploadedImageUrl = null;
-      if (selectedImage) {
-        uploadedImageUrl = await uploadProductImage(selectedImage.uri);
-      }
-
-      const catId = categoriesData?.data?.[0]?.id || 1;
-      await createProductMutation.mutateAsync({
-        name: newName.trim(),
-        reference: newRef.trim().toUpperCase(),
-        price: parseFloat(newPrice) || 0,
-        quantity: parseInt(newQty, 10) || 0,
-        minStock: parseInt(newMinStock, 10) || 5,
-        categoryId: catId,
-        imageUrl: uploadedImageUrl,
-      });
-
-      setShowAddModal(false);
-      setNewName('');
-      setNewRef('');
-      setNewPrice('');
-      setNewQty('');
-      setNewMinStock('5');
-      setSelectedImage(null);
-      Alert.alert('Succès', 'Produit créé avec succès.');
-    } catch (err: any) {
-      setFormError(
-        err.message || err.response?.data?.message || 'Échec de la création du produit. Vérifiez l\'unicité du SKU.'
-      );
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -183,7 +91,7 @@ export default function ProductsScreen() {
           <Text style={styles.title}>Produits</Text>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => setShowAddModal(true)}
+            onPress={() => router.push('/products/create')}
             style={styles.addBtn}
           >
             <Ionicons name="add" size={22} color={COLORS.white} />
@@ -200,9 +108,9 @@ export default function ProductsScreen() {
         </View>
 
         {/* Filter Chips */}
-        <View style={styles.chipsRow}>
+        <View style={styles.filtersWrapper}>
           <FilterChip
-            label="Tout"
+            label="Tous"
             count={counts.total}
             active={activeFilter === 'ALL'}
             onPress={() => setActiveFilter('ALL')}
@@ -214,40 +122,41 @@ export default function ProductsScreen() {
             onPress={() => setActiveFilter('LOW')}
           />
           <FilterChip
-            label="Rupture de stock"
+            label="Épuisé"
             count={counts.out}
             active={activeFilter === 'OUT'}
             onPress={() => setActiveFilter('OUT')}
           />
         </View>
 
-        {/* Inventory Summary Mini Row */}
-        <View style={styles.summaryBar}>
-          <View style={styles.summaryCol}>
-            <Text style={styles.summaryValue}>{totalValuation}</Text>
-            <Text style={styles.summarySub}>+2.1% ce mois-ci</Text>
+        {/* Catalog Summary Card */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryItem}>
+            <View style={[styles.summaryIconBox, { backgroundColor: COLORS.infoBg }]}>
+              <Ionicons name="cube-outline" size={16} color={COLORS.primaryBlue} />
+            </View>
+            <View>
+              <Text style={styles.summaryLabel}>Total Unités</Text>
+              <Text style={styles.summaryValue}>{stats.totalItems.toLocaleString()}</Text>
+            </View>
           </View>
-          <View style={[styles.summaryCol, { alignItems: 'flex-end' }]}>
-            <Text style={styles.summaryValue}>{rawProducts.length} Articles</Text>
-            <Text style={[styles.summarySub, { color: COLORS.warningText }]}>
-              {counts.low} à recommander
-            </Text>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryItem}>
+            <View style={[styles.summaryIconBox, { backgroundColor: COLORS.successBg }]}>
+              <Ionicons name="cash-outline" size={16} color={COLORS.success} />
+            </View>
+            <View>
+              <Text style={styles.summaryLabel}>Valeur du Stock</Text>
+              <Text style={styles.summaryValue}>
+                {formatCurrency(stats.totalValue)}
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* Product List */}
-        {isLoading && !productsData ? (
+        {isLoading ? (
           <LoadingState message="Chargement du catalogue..." />
-        ) : filteredProducts.length === 0 ? (
-          <EmptyState
-            title="Aucun produit trouvé"
-            description="Essayez de modifier votre recherche ou filtre."
-            actionText="Effacer les filtres"
-            onActionPress={() => {
-              setSearch('');
-              setActiveFilter('ALL');
-            }}
-          />
         ) : (
           <FlatList
             data={filteredProducts}
@@ -255,138 +164,51 @@ export default function ProductsScreen() {
             renderItem={({ item }) => (
               <ProductRow
                 product={item}
-                variant="full"
                 onPress={() => router.push(`/products/${item.id}`)}
               />
             )}
             contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={refetch}
                 tintColor={COLORS.primaryBlue}
-                colors={[COLORS.primaryBlue]}
+              />
+            }
+            ListEmptyComponent={
+              <EmptyState
+                icon="cube-outline"
+                title="Aucun produit trouvé"
+                description={
+                  search
+                    ? `Aucun résultat pour "${search}". Essayez un autre terme.`
+                    : 'Commencez par ajouter des produits à votre inventaire.'
+                }
               />
             }
             ListFooterComponent={
-              /* AI Reorder Prompt Banner matching reference design */
+              /* AI Prompt Shortcut Banner */
               <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => router.push('/(tabs)/ai')}
                 style={styles.aiBanner}
+                activeOpacity={0.8}
+                onPress={() => router.push('/(tabs)/ai')}
               >
                 <View style={styles.aiBannerIcon}>
                   <Ionicons name="sparkles" size={16} color={COLORS.primaryBlue} />
                 </View>
-                <View style={styles.aiBannerTextCol}>
-                  <View style={styles.aiBannerTagRow}>
-                    <Text style={styles.aiBannerTag}>Recommandation IA</Text>
-                    <Text style={styles.aiBannerAction}>Voir le brouillon →</Text>
+                <View style={styles.aiBannerText}>
+                  <View style={styles.aiBannerHeader}>
+                    <Text style={styles.aiBannerTitle}>Besoin de réapprovisionner ?</Text>
+                    <Text style={styles.aiBannerAction}>Consulter l'IA →</Text>
                   </View>
                   <Text style={styles.aiBannerBody}>
-                    Alerte de stock faible détectée.
+                    Demandez des recommandations d'achat automatiques à l'agent StockMaster.
                   </Text>
                 </View>
               </TouchableOpacity>
             }
           />
         )}
-
-        {/* Create Product Modal */}
-        <Modal
-          visible={showAddModal}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setShowAddModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Nouveau produit</Text>
-                <TouchableOpacity
-                  onPress={() => setShowAddModal(false)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="close" size={22} color={COLORS.secondaryText} />
-                </TouchableOpacity>
-              </View>
-
-              {formError && (
-                <View style={styles.modalError}>
-                  <Text style={styles.modalErrorText}>{formError}</Text>
-                </View>
-              )}
-
-              <View style={styles.imagePickerContainer}>
-                <Text style={styles.imagePickerLabel}>Image du produit</Text>
-                {selectedImage ? (
-                  <View style={styles.selectedImageWrapper}>
-                    <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
-                    <TouchableOpacity onPress={handleSelectImage} style={styles.changeImageBtn}>
-                      <Text style={styles.changeImageText}>Modifier l’image</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity onPress={handleSelectImage} style={styles.imagePlaceholder}>
-                    <Ionicons name="image-outline" size={32} color={COLORS.secondaryText} />
-                    <Text style={styles.imagePlaceholderText}>Ajouter une image</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <InputField
-                label="Nom du produit *"
-                placeholder="ex: Souris sans fil"
-                value={newName}
-                onChangeText={setNewName}
-              />
-              <InputField
-                label="Référence SKU *"
-                placeholder="e.g. SKU-9821"
-                value={newRef}
-                onChangeText={setNewRef}
-                autoCapitalize="characters"
-              />
-              <View style={styles.modalRowInputs}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <InputField
-                    label="Prix (DH) *"
-                    placeholder="99.00"
-                    keyboardType="numeric"
-                    value={newPrice}
-                    onChangeText={setNewPrice}
-                  />
-                </View>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <InputField
-                    label="Quantité"
-                    placeholder="20"
-                    keyboardType="number-pad"
-                    value={newQty}
-                    onChangeText={setNewQty}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <InputField
-                    label="Stock min"
-                    placeholder="5"
-                    keyboardType="number-pad"
-                    value={newMinStock}
-                    onChangeText={setNewMinStock}
-                  />
-                </View>
-              </View>
-
-              <PrimaryButton
-                title={isUploading ? "Ajout en cours..." : "Créer le produit"}
-                onPress={handleCreateProduct}
-                loading={isUploading || createProductMutation.isPending}
-                style={styles.modalSaveBtn}
-              />
-            </View>
-          </View>
-        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -418,79 +240,104 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: COLORS.primaryBlue,
+    backgroundColor: COLORS.primaryDarkNavy,
     justifyContent: 'center',
     alignItems: 'center',
-    ...SHADOWS.sm,
+    ...SHADOWS.md,
   },
   searchWrapper: {
     paddingHorizontal: 20,
     marginBottom: 12,
   },
-  chipsRow: {
+  filtersWrapper: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     marginBottom: 12,
   },
-  summaryBar: {
+  summaryCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginBottom: 8,
-    backgroundColor: 'rgba(217, 244, 242, 0.35)',
-    borderRadius: 14,
-    marginHorizontal: 20,
-  },
-  summaryCol: {},
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  summarySub: {
-    fontSize: 11,
-    color: COLORS.secondaryText,
-    marginTop: 1,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  aiBanner: {
     backgroundColor: COLORS.cardBackground,
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    marginHorizontal: 20,
+    marginBottom: 14,
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#C8E6E5',
-    marginTop: 12,
-    marginBottom: 16,
+    borderColor: COLORS.border,
     ...SHADOWS.sm,
   },
-  aiBannerIcon: {
+  summaryItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  summaryIconBox: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.lightCyan,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
-  aiBannerTextCol: {
+  summaryLabel: {
+    fontSize: 10,
+    color: COLORS.secondaryText,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 1,
+  },
+  summaryDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: COLORS.borderLight,
+    marginHorizontal: 8,
+    alignSelf: 'center',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+  },
+  aiBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBackground,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 111, 166, 0.25)',
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primaryBlue,
+    ...SHADOWS.sm,
+  },
+  aiBannerIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.infoBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  aiBannerText: {
     flex: 1,
   },
-  aiBannerTagRow: {
+  aiBannerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 3,
   },
-  aiBannerTag: {
-    fontSize: 12,
+  aiBannerTitle: {
+    fontSize: 13,
     fontWeight: '700',
-    color: COLORS.primaryDarkNavy,
+    color: COLORS.text,
   },
   aiBannerAction: {
     fontSize: 11,
@@ -501,89 +348,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.secondaryText,
     lineHeight: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.cardBackground,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    maxHeight: '85%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  modalError: {
-    backgroundColor: COLORS.dangerBg,
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 14,
-  },
-  modalErrorText: {
-    color: COLORS.dangerText,
-    fontSize: 12,
-  },
-  modalRowInputs: {
-    flexDirection: 'row',
-  },
-  modalSaveBtn: {
-    marginTop: 8,
-  },
-  imagePickerContainer: {
-    marginBottom: 16,
-  },
-  imagePickerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  imagePlaceholder: {
-    height: 100,
-    width: 100,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholderText: {
-    fontSize: 12,
-    color: COLORS.secondaryText,
-    marginTop: 4,
-  },
-  selectedImageWrapper: {
-    alignItems: 'flex-start',
-  },
-  previewImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  changeImageBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: COLORS.lightCyan,
-    borderRadius: 6,
-  },
-  changeImageText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.primaryBlue,
   },
 });

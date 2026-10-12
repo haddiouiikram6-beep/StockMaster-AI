@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { formatCurrency } from '../utils/currency';
 import { COLORS, SHADOWS } from '../constants/theme';
 
-interface ProductItem {
-  id: number;
+export interface ProductItem {
+  id?: number | string;
   name: string;
   reference?: string;
   price: number | string;
@@ -18,22 +18,27 @@ interface ProductItem {
 
 interface FoundProductsCardProps {
   products: ProductItem[];
+  title?: string;
 }
 
-export const FoundProductsCard: React.FC<FoundProductsCardProps> = ({ products }) => {
+export const FoundProductsCard: React.FC<FoundProductsCardProps> = ({ products, title }) => {
   if (!products || products.length === 0) return null;
+
+  const hasScore = products.some(p => p.score !== undefined && p.score > 0);
+  const cardTitle = title || (hasScore ? 'Recherche Vectorielle Pinecone' : 'Produits concernés');
+  const cardIcon = hasScore ? 'git-network-outline' : 'cube-outline';
 
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="git-network-outline" size={14} color={COLORS.primaryBlue} />
-          <Text style={styles.headerTitle}>Recherche Vectorielle Pinecone</Text>
+          <Ionicons name={cardIcon} size={14} color={COLORS.primaryBlue} />
+          <Text style={styles.headerTitle}>{cardTitle}</Text>
         </View>
         <View style={styles.countBadge}>
           <Text style={styles.countText}>
-            {products.length} résultat{products.length > 1 ? 's' : ''}
+            {products.length} produit{products.length > 1 ? 's' : ''}
           </Text>
         </View>
       </View>
@@ -45,13 +50,13 @@ export const FoundProductsCard: React.FC<FoundProductsCardProps> = ({ products }
           const isLowStock = !isOutOfStock && (item.quantity ?? 0) <= (item.minStock ?? 5);
 
           return (
-            <View key={item.id || idx} style={[styles.itemRow, idx > 0 && styles.itemBorder]}>
+            <View key={item.id ? String(item.id) : `${item.reference || idx}`} style={[styles.itemRow, idx > 0 && styles.itemBorder]}>
               <View style={styles.itemLeft}>
                 <Text style={styles.itemName} numberOfLines={1}>
                   {item.name}
                 </Text>
                 <View style={styles.itemMeta}>
-                  <Text style={styles.itemSku}>{item.reference || 'SKU N/A'}</Text>
+                  <Text style={styles.itemSku}>{item.reference || 'SKU Auto'}</Text>
                   {item.category && (
                     <Text style={styles.itemCategory}> • {item.category}</Text>
                   )}
@@ -102,7 +107,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardBackground,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(0, 111, 166, 0.3)', // subtle blue border
+    borderColor: 'rgba(0, 111, 166, 0.3)',
     marginTop: 10,
     overflow: 'hidden',
     ...SHADOWS.md,
@@ -218,3 +223,5 @@ const styles = StyleSheet.create({
     color: COLORS.dangerText,
   },
 });
+
+export default FoundProductsCard;

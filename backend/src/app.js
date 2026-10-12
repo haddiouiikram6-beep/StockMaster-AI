@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
@@ -11,7 +12,7 @@ import { logger } from './utils/logger.js';
 import errorHandler from './middlewares/errorHandler.middleware.js';
 import { apiLimiter } from './middlewares/rateLimit.middleware.js';
 
-// Routes
+// Application Routes
 import authRoutes from './routes/auth.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import supplierRoutes from './routes/supplier.routes.js';
@@ -24,12 +25,20 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Security Headers
-app.use(helmet({
-  contentSecurityPolicy: false // Allow Swagger UI assets
+// Enable Cross-Origin Resource Sharing (CORS) for mobile, web, and tooling
+app.use(cors({
+  origin: env.CORS_ORIGIN === '*' ? true : (env.CORS_ORIGIN || true),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With']
 }));
 
-// Request Parsers
+// Security Headers (Configured for compatibility with Swagger UI)
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+
+// Body Parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -46,6 +55,30 @@ try {
   logger.warn('Swagger specification could not be loaded at /api/docs:', swErr.message);
 }
 
+// Welcome / API Discovery endpoints
+const apiDiscoveryHandler = (req, res) => {
+  res.status(200).json({
+    name: 'StockMaster AI Backend API',
+    version: '1.0.0',
+    description: 'Inventory Management System with AI Agent Integration',
+    status: 'ONLINE',
+    environment: env.NODE_ENV,
+    documentation: '/api/docs',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      products: '/api/products',
+      categories: '/api/categories',
+      suppliers: '/api/suppliers',
+      stockMovements: '/api/stock-movements',
+      ai: '/api/ai'
+    }
+  });
+};
+
+app.get('/', apiDiscoveryHandler);
+app.get('/api', apiDiscoveryHandler);
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -56,7 +89,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Apply General Rate Limiter to API routes
+// Apply API Rate Limiter
 app.use('/api/', apiLimiter);
 
 // Mount Application Routes
@@ -67,7 +100,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/stock-movements', stockMovementRoutes);
 app.use('/api/ai', aiRoutes);
 
-// 404 Handler
+// 404 Route Not Found Handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -75,7 +108,7 @@ app.use((req, res) => {
   });
 });
 
-// Global Error Handler
+// Centralized Global Error Handler
 app.use(errorHandler);
 
 export { app };

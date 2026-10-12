@@ -28,8 +28,14 @@ const startServer = async () => {
     }
 
     const server = app.listen(PORT, () => {
-      logger.info(`StockMaster AI Backend listening on port ${PORT} [${env.NODE_ENV}]`);
-      logger.info(`API Documentation available at: http://localhost:${PORT}/api/docs`);
+      logger.info('==================================================');
+      logger.info(`🚀 StockMaster AI Backend is LIVE on port ${PORT}`);
+      logger.info(`🌐 Base URL:      http://localhost:${PORT}`);
+      logger.info(`📚 Swagger Docs:  http://localhost:${PORT}/api/docs`);
+      logger.info(`❤️  Health Check:  http://localhost:${PORT}/api/health`);
+      logger.info(`🤖 AI Agent:     http://localhost:${PORT}/api/ai/chat`);
+      logger.info(`⚙️  Environment:   ${env.NODE_ENV}`);
+      logger.info('==================================================');
     });
 
     const shutdown = async (signal) => {

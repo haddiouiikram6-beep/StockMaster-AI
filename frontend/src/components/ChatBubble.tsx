@@ -6,6 +6,7 @@ import { COLORS, SHADOWS } from '../constants/theme';
 import { ReorderCard } from './ReorderCard';
 import { CreatedProductCard } from './CreatedProductCard';
 import { FoundProductsCard } from './FoundProductsCard';
+import { MarkdownText } from './MarkdownText';
 
 interface ChatBubbleProps {
   message: Message;
@@ -32,6 +33,16 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
     );
   }
 
+  // Filter out createdProduct from products list if both are provided to avoid duplicate cards
+  const displayProducts = createdProduct
+    ? (products || []).filter(
+        (p) =>
+          p.id !== createdProduct.id &&
+          p.reference !== createdProduct.reference &&
+          p.name !== createdProduct.name
+      )
+    : products;
+
   // Assistant bubble
   return (
     <View style={styles.botContainer}>
@@ -45,22 +56,26 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
             <View style={styles.toolBadge}>
               <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
               <Text style={styles.toolBadgeText}>
-                {message.toolsExecuted.join(', ')} executed
+                {message.toolsExecuted.join(', ')} exécuté
               </Text>
             </View>
           )}
 
           <View style={styles.botBubble}>
-            <Text style={styles.botText}>{message.content}</Text>
+            {/* Parsed, readable typography (no raw markdown hashes or symbols) */}
+            <MarkdownText content={message.content} />
 
             {/* Created Product Card */}
             {createdProduct && (
               <CreatedProductCard product={createdProduct} />
             )}
 
-            {/* Found Products (Pinecone Vector Search) */}
-            {products && products.length > 0 && (
-              <FoundProductsCard products={products} />
+            {/* Display products discussed / found */}
+            {displayProducts && displayProducts.length > 0 && (
+              <FoundProductsCard
+                products={displayProducts}
+                title="Produits concernés"
+              />
             )}
 
             {/* Reorder Recommendations */}
@@ -145,12 +160,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     ...SHADOWS.sm,
   },
-  botText: {
-    color: COLORS.text,
-    fontSize: 14,
-    lineHeight: 21,
-  },
   recommendationsList: {
     marginTop: 6,
   },
 });
+
+export default ChatBubble;

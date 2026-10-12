@@ -1,170 +1,36 @@
-import { Category, Product } from '../models/index.js';
+import categoryService from '../services/category.service.js';
+import { successResponse, paginatedResponse } from '../utils/response.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
 /**
- * Get all categories
- * GET /api/categories
+ * Category Controller
+ * Handles HTTP requests and delegates business logic to CategoryService
  */
-const getAllCategories = async (req, res, next) => {
-  try {
-    const page = parseInt(req.query.page || '1', 10);
-    const limit = parseInt(req.query.limit || '50', 10);
-    const offset = (page - 1) * limit;
 
-    const { count, rows } = await Category.findAndCountAll({
-      offset,
-      limit,
-      order: [['name', 'ASC']]
-    });
+export const getAllCategories = asyncHandler(async (req, res) => {
+  const { rows, pagination } = await categoryService.getAll(req.query);
+  return paginatedResponse(res, rows, pagination);
+});
 
-    res.status(200).json({
-      success: true,
-      data: rows,
-      pagination: {
-        page,
-        limit,
-        total: count,
-        totalPages: Math.ceil(count / limit) || 1
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+export const getCategoryById = asyncHandler(async (req, res) => {
+  const category = await categoryService.getById(req.params.id);
+  return successResponse(res, category);
+});
 
-/**
- * Get category by ID
- * GET /api/categories/:id
- */
-const getCategoryById = async (req, res, next) => {
-  try {
-    const category = await Category.findByPk(req.params.id, {
-      include: [{ model: Product, as: 'products', attributes: ['id', 'name', 'reference', 'price', 'quantity'] }]
-    });
+export const createCategory = asyncHandler(async (req, res) => {
+  const category = await categoryService.create(req.body);
+  return successResponse(res, category, null, 201);
+});
 
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found.'
-      });
-    }
+export const updateCategory = asyncHandler(async (req, res) => {
+  const category = await categoryService.update(req.params.id, req.body);
+  return successResponse(res, category);
+});
 
-    res.status(200).json({
-      success: true,
-      data: category
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Create a new category
- * POST /api/categories
- */
-const createCategory = async (req, res, next) => {
-  try {
-    const { name, description } = req.body;
-
-    const existing = await Category.findOne({ where: { name } });
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        message: 'A category with this name already exists.'
-      });
-    }
-
-    const category = await Category.create({ name, description });
-
-    res.status(201).json({
-      success: true,
-      data: category
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Update an existing category
- * PUT /api/categories/:id
- */
-const updateCategory = async (req, res, next) => {
-  try {
-    const category = await Category.findByPk(req.params.id);
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found.'
-      });
-    }
-
-    const { name, description } = req.body;
-
-    if (name && name !== category.name) {
-      const existing = await Category.findOne({ where: { name } });
-      if (existing) {
-        return res.status(409).json({
-          success: false,
-          message: 'Another category with this name already exists.'
-        });
-      }
-    }
-
-    await category.update({
-      name: name !== undefined ? name : category.name,
-      description: description !== undefined ? description : category.description
-    });
-
-    res.status(200).json({
-      success: true,
-      data: category
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Delete a category
- * DELETE /api/categories/:id
- */
-const deleteCategory = async (req, res, next) => {
-  try {
-    const category = await Category.findByPk(req.params.id);
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found.'
-      });
-    }
-
-    // Check if category has associated products
-    const associatedProductsCount = await Product.count({ where: { categoryId: category.id } });
-    if (associatedProductsCount > 0) {
-      return res.status(409).json({
-        success: false,
-        message: `Cannot delete category. It has ${associatedProductsCount} associated product(s).`
-      });
-    }
-
-    await category.destroy();
-
-    res.status(200).json({
-      success: true,
-      message: 'Category deleted successfully.'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export {
-  getAllCategories,
-  getCategoryById,
-  createCategory,
-  updateCategory,
-  deleteCategory
-};
+export const deleteCategory = asyncHandler(async (req, res) => {
+  await categoryService.delete(req.params.id);
+  return successResponse(res, null, 'Category deleted successfully.');
+});
 
 export default {
   getAllCategories,

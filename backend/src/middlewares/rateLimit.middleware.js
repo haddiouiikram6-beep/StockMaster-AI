@@ -1,9 +1,13 @@
 import rateLimit from 'express-rate-limit';
+import env from '../config/env.js';
+
+const isDevOrTest = env.NODE_ENV !== 'production';
 
 // General API rate limiter
-const apiLimiter = rateLimit({
+export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
+  max: isDevOrTest ? 10000 : 300,
+  skip: () => isDevOrTest,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -13,9 +17,10 @@ const apiLimiter = rateLimit({
 });
 
 // Stricter limiter for authentication endpoints
-const authLimiter = rateLimit({
+export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: isDevOrTest ? 5000 : 30,
+  skip: () => isDevOrTest,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -25,9 +30,10 @@ const authLimiter = rateLimit({
 });
 
 // Stricter limiter for AI Agent chat to prevent abuse
-const aiLimiter = rateLimit({
+export const aiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20,
+  max: isDevOrTest ? 2000 : 20,
+  skip: () => isDevOrTest,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -35,12 +41,6 @@ const aiLimiter = rateLimit({
     message: 'AI request limit reached. Please wait a moment before sending more messages.'
   }
 });
-
-export {
-  apiLimiter,
-  authLimiter,
-  aiLimiter
-};
 
 export default {
   apiLimiter,
