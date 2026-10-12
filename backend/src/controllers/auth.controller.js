@@ -1,6 +1,6 @@
-const { User, RefreshToken } = require('../models');
-const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../utils/jwt');
-const { logger } = require('../utils/logger');
+import { User, RefreshToken } from '../models/index.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Register a new user
@@ -207,7 +207,15 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
+  register,
+  login,
+  refresh,
+  logout,
+  getMe
+};
+
+export default {
   register,
   login,
   refresh,

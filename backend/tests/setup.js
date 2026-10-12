@@ -1,11 +1,5 @@
-process.env.NODE_ENV = 'test';
-process.env.DB_DIALECT = 'sqlite';
-process.env.DB_STORAGE = ':memory:';
-process.env.JWT_ACCESS_SECRET = 'test_access_secret_stockmaster_123';
-process.env.JWT_REFRESH_SECRET = 'test_refresh_secret_stockmaster_123';
-
-const { sequelize, User, Category, Supplier, Product } = require('../src/models');
-const { generateAccessToken } = require('../src/utils/jwt');
+import { sequelize, User, Category, Supplier, Product } from '../src/models/index.js';
+import { generateAccessToken } from '../src/utils/jwt.js';
 
 /**
  * Initializes test database schema
@@ -92,7 +86,13 @@ const seedTestDb = async () => {
   };
 };
 
-module.exports = {
+export {
+  initTestDb,
+  seedTestDb,
+  sequelize
+};
+
+export default {
   initTestDb,
   seedTestDb,
   sequelize

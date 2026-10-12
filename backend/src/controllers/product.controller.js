@@ -1,5 +1,5 @@
-const { Op, col, where } = require('sequelize');
-const { Product, Category, Supplier, StockMovement, sequelize } = require('../models');
+import { Op, col, where } from 'sequelize';
+import { Product, Category, Supplier, StockMovement, sequelize } from '../models/index.js';
 
 /**
  * Get all products with pagination, filtering, and sorting
@@ -266,7 +266,15 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
+  getAllProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct
+};
+
+export default {
   getAllProducts,
   getProductById,
   createProduct,

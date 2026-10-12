@@ -69,7 +69,12 @@ const sanitizeOutput = (text) => {
   return sanitized;
 };
 
-module.exports = {
+export {
+  checkPromptInjection,
+  sanitizeOutput
+};
+
+export default {
   checkPromptInjection,
   sanitizeOutput
 };

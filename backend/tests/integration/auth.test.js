@@ -1,6 +1,6 @@
-const request = require('supertest');
-const app = require('../../src/app');
-const { seedTestDb, sequelize } = require('../setup');
+import request from 'supertest';
+import app from '../../src/app.js';
+import { seedTestDb, sequelize } from '../setup.js';
 
 describe('Auth Integration Tests', () => {
   let fixtures;

@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 const chatSchema = z.object({
   conversationId: z.any().optional(),
@@ -6,6 +6,10 @@ const chatSchema = z.object({
   stream: z.boolean().optional().default(false)
 });
 
-module.exports = {
+export {
+  chatSchema
+};
+
+export default {
   chatSchema
 };

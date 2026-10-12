@@ -1,4 +1,4 @@
-const { hashPassword, comparePassword } = require('../../src/utils/password');
+import { hashPassword, comparePassword } from '../../src/utils/password.js';
 
 describe('Password Utility', () => {
   it('should hash a password securely', async () => {

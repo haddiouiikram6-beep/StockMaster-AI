@@ -1,4 +1,4 @@
-const { Supplier, Product } = require('../models');
+import { Supplier, Product } from '../models/index.js';
 
 /**
  * Get all suppliers
@@ -132,7 +132,15 @@ const deleteSupplier = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
+  getAllSuppliers,
+  getSupplierById,
+  createSupplier,
+  updateSupplier,
+  deleteSupplier
+};
+
+export default {
   getAllSuppliers,
   getSupplierById,
   createSupplier,

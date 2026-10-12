@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import * as supplierController from '../controllers/supplier.controller.js';
+import validate from '../middlewares/validate.middleware.js';
+import { createSupplierSchema, updateSupplierSchema } from '../validators/supplier.validator.js';
+import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+
 const router = express.Router();
-const supplierController = require('../controllers/supplier.controller');
-const validate = require('../middlewares/validate.middleware');
-const { createSupplierSchema, updateSupplierSchema } = require('../validators/supplier.validator');
-const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 router.get('/', authenticate, supplierController.getAllSuppliers);
 router.get('/:id', authenticate, supplierController.getSupplierById);
@@ -11,4 +12,4 @@ router.post('/', authenticate, authorize('admin', 'manager'), validate(createSup
 router.put('/:id', authenticate, authorize('admin', 'manager'), validate(updateSupplierSchema), supplierController.updateSupplier);
 router.delete('/:id', authenticate, authorize('admin'), supplierController.deleteSupplier);
 
-module.exports = router;
+export default router;

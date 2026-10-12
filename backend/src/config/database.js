@@ -1,5 +1,5 @@
-const { Sequelize } = require('sequelize');
-const env = require('./env');
+import { Sequelize } from 'sequelize';
+import env from './env.js';
 
 const isTest = env.NODE_ENV === 'test' || env.DB_DIALECT === 'sqlite';
 
@@ -44,40 +44,48 @@ if (isTest) {
   );
 }
 
-module.exports = {
-  sequelize,
-  development: {
-    username: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: env.DB_NAME,
-    host: env.DB_HOST,
-    port: env.DB_PORT,
-    dialect: 'postgres',
-    logging: false
-  },
-  test: {
-    username: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: `${env.DB_NAME}_test`,
-    host: env.DB_HOST,
-    port: env.DB_PORT,
-    dialect: env.DB_DIALECT === 'sqlite' ? 'sqlite' : 'postgres',
-    storage: env.DB_STORAGE || ':memory:',
-    logging: false
-  },
-  production: {
-    username: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: env.DB_NAME,
-    host: env.DB_HOST,
-    port: env.DB_PORT,
-    dialect: 'postgres',
-    logging: false,
-    pool: {
-      max: 20,
-      min: 2,
-      acquire: 30000,
-      idle: 10000
-    }
+const development = {
+  username: env.DB_USER,
+  password: env.DB_PASSWORD,
+  database: env.DB_NAME,
+  host: env.DB_HOST,
+  port: env.DB_PORT,
+  dialect: 'postgres',
+  logging: false
+};
+
+const test = {
+  username: env.DB_USER,
+  password: env.DB_PASSWORD,
+  database: `${env.DB_NAME}_test`,
+  host: env.DB_HOST,
+  port: env.DB_PORT,
+  dialect: env.DB_DIALECT === 'sqlite' ? 'sqlite' : 'postgres',
+  storage: env.DB_STORAGE || ':memory:',
+  logging: false
+};
+
+const production = {
+  username: env.DB_USER,
+  password: env.DB_PASSWORD,
+  database: env.DB_NAME,
+  host: env.DB_HOST,
+  port: env.DB_PORT,
+  dialect: 'postgres',
+  logging: false,
+  pool: {
+    max: 20,
+    min: 2,
+    acquire: 30000,
+    idle: 10000
   }
 };
+
+export {
+  sequelize,
+  development,
+  test,
+  production
+};
+
+export default sequelize;

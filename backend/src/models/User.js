@@ -1,6 +1,6 @@
-const { DataTypes, Model } = require('sequelize');
-const { sequelize } = require('../config/database');
-const { hashPassword, comparePassword } = require('../utils/password');
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database.js';
+import { hashPassword, comparePassword } from '../utils/password.js';
 
 class User extends Model {
   async checkPassword(candidatePassword) {
@@ -75,4 +75,5 @@ User.init(
   }
 );
 
-module.exports = User;
+export { User };
+export default User;

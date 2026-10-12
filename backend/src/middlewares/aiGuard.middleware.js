@@ -1,5 +1,5 @@
-const { checkPromptInjection } = require('../ai/guardrails');
-const { aiAuditLogger, logger } = require('../utils/logger');
+import { checkPromptInjection } from '../ai/guardrails.js';
+import { aiAuditLogger, logger } from '../utils/logger.js';
 
 /**
  * Middleware that guards AI endpoints from prompt injection and policy violations
@@ -32,4 +32,5 @@ const aiGuard = (req, res, next) => {
   next();
 };
 
-module.exports = aiGuard;
+export { aiGuard };
+export default aiGuard;

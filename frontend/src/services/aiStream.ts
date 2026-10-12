@@ -12,6 +12,8 @@ export interface SendMessageOptions {
     fullAnswer: string;
     toolsExecuted?: string[];
     recommendations?: ReorderRecommendation[];
+    products?: any[];
+    createdProduct?: any;
   }) => void;
   onError: (errorMsg: string) => void;
 }
@@ -101,6 +103,9 @@ export const sendChatMessage = ({
     let accumulated = '';
     let seenIndex = 0;
     let finalTools: string[] = [];
+    let finalProducts: any[] = [];
+    let finalCreatedProduct: any = null;
+    let finalRecommendations: ReorderRecommendation[] = [];
     let convId = conversationId || 0;
     let isFinished = false;
 
@@ -143,6 +148,15 @@ export const sendChatMessage = ({
             if (parsed.toolsExecuted) {
               finalTools = parsed.toolsExecuted;
               onToolsExecuted?.(parsed.toolsExecuted);
+            }
+            if (parsed.products) {
+              finalProducts = parsed.products;
+            }
+            if (parsed.createdProduct) {
+              finalCreatedProduct = parsed.createdProduct;
+            }
+            if (parsed.recommendations) {
+              finalRecommendations = parsed.recommendations;
             }
             if (parsed.conversationId) {
               convId = parsed.conversationId;
@@ -188,23 +202,30 @@ export const sendChatMessage = ({
         if (!accumulated && xhr.responseText) {
           try {
             const jsonResp = JSON.parse(xhr.responseText);
-            if (jsonResp.data?.answer) {
-              accumulated = jsonResp.data.answer;
+            if (jsonResp.data?.answer || jsonResp.data?.reply) {
+              accumulated = jsonResp.data.answer || jsonResp.data.reply;
               convId = jsonResp.data.conversationId;
               finalTools = jsonResp.data.toolsExecuted || [];
+              finalProducts = jsonResp.data.products || [];
+              finalCreatedProduct = jsonResp.data.createdProduct || null;
+              finalRecommendations = jsonResp.data.recommendations || [];
             }
           } catch {}
         }
 
-        const recommendations = finalTools.includes('recommendReorder')
-          ? extractReorderRecommendations(accumulated)
-          : [];
+        const recommendations = (finalRecommendations && finalRecommendations.length > 0)
+          ? finalRecommendations
+          : (finalTools.includes('recommendReorder')
+              ? extractReorderRecommendations(accumulated)
+              : []);
 
         onComplete({
           conversationId: convId,
           fullAnswer: accumulated,
           toolsExecuted: finalTools,
           recommendations,
+          products: finalProducts,
+          createdProduct: finalCreatedProduct,
         });
       } else {
         // Fallback to standard request
@@ -289,15 +310,20 @@ const fallbackStandardChat = async ({
     }
 
     if (json.success && json.data) {
-      const recs = json.data.toolsExecuted?.includes('recommendReorder')
-        ? extractReorderRecommendations(json.data.answer)
-        : [];
+      const answer = json.data.answer || json.data.reply || '';
+      const recs = json.data.recommendations?.length
+        ? json.data.recommendations
+        : (json.data.toolsExecuted?.includes('recommendReorder')
+            ? extractReorderRecommendations(answer)
+            : []);
 
       onComplete({
         conversationId: json.data.conversationId,
-        fullAnswer: json.data.answer,
+        fullAnswer: answer,
         toolsExecuted: json.data.toolsExecuted,
         recommendations: recs,
+        products: json.data.products || [],
+        createdProduct: json.data.createdProduct || null,
       });
     } else {
       onError(json.message || "Sorry, I can't process this request.");

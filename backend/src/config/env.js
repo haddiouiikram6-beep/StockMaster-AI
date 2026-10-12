@@ -1,5 +1,5 @@
-const dotenv = require('dotenv');
-const path = require('path');
+import dotenv from 'dotenv';
+import path from 'path';
 
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -23,13 +23,25 @@ const env = {
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 
-  // OpenAI / LLM Configuration
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
-  OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || '',
-  OPENAI_MODEL: process.env.OPENAI_MODEL || '',
+  // DeepSeek / LLM Configuration
+  DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '',
+  DEEPSEEK_BASE_URL: process.env.DEEPSEEK_BASE_URL || (process.env.OPENAI_BASE_URL && !process.env.OPENAI_BASE_URL.includes('groq.com') ? process.env.OPENAI_BASE_URL : 'https://api.deepseek.com'),
+  DEEPSEEK_MODEL: process.env.DEEPSEEK_MODEL || (process.env.OPENAI_MODEL && !process.env.OPENAI_MODEL.includes('gpt') && !process.env.OPENAI_MODEL.includes('llama') ? process.env.OPENAI_MODEL : 'deepseek-chat'),
+
+  // Backwards compatibility aliases
+  OPENAI_API_KEY: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '',
+  OPENAI_BASE_URL: process.env.DEEPSEEK_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.deepseek.com',
+  OPENAI_MODEL: process.env.DEEPSEEK_MODEL || process.env.OPENAI_MODEL || 'deepseek-chat',
+
+  // Pinecone Vector DB Configuration
+  PINECONE_API_KEY: process.env.PINECONE_API_KEY || '',
+  PINECONE_INDEX: process.env.PINECONE_INDEX || 'stockmaster-products',
+  PINECONE_ENVIRONMENT: process.env.PINECONE_ENVIRONMENT || '',
+  PINECONE_EMBEDDING_MODEL: process.env.PINECONE_EMBEDDING_MODEL || 'llama-text-embed-v2',
 
   // CORS Configuration
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*'
 };
 
-module.exports = env;
+export { env };
+export default env;

@@ -5,7 +5,7 @@ info:
   description: >
     Production-ready RESTful backend API for StockMaster AI mobile stock management application,
     featuring JWT authentication, RBAC, inventory catalog & movement tracking, and an integrated
-    intelligent AI Agent powered by OpenAI Function Calling.
+    intelligent AI Agent powered by DeepSeek Function Calling.
 servers:
   - url: http://localhost:3000/api
     description: Local Development Server

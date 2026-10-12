@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 const createProductSchema = z.object({
   name: z.string().trim().min(1, 'Product name is required').max(200),
@@ -35,7 +35,13 @@ const queryProductSchema = z.object({
   order: z.enum(['asc', 'desc', 'ASC', 'DESC']).default('desc').transform(val => val.toUpperCase())
 });
 
-module.exports = {
+export {
+  createProductSchema,
+  updateProductSchema,
+  queryProductSchema
+};
+
+export default {
   createProductSchema,
   updateProductSchema,
   queryProductSchema

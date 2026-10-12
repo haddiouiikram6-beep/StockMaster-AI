@@ -7,7 +7,16 @@ const validate = (schema, source = 'body') => {
   return async (req, res, next) => {
     try {
       const parsed = await schema.parseAsync(req[source]);
-      req[source] = parsed;
+      try {
+        req[source] = parsed;
+      } catch (_) {
+        Object.defineProperty(req, source, {
+          value: parsed,
+          writable: true,
+          configurable: true,
+          enumerable: true
+        });
+      }
       next();
     } catch (error) {
       if (error.errors) {
@@ -34,4 +43,5 @@ const validate = (schema, source = 'body') => {
   };
 };
 
-module.exports = validate;
+export { validate };
+export default validate;

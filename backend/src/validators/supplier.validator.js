@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 const createSupplierSchema = z.object({
   name: z.string().trim().min(1, 'Supplier name is required').max(150),
@@ -12,7 +12,12 @@ const updateSupplierSchema = z.object({
   email: z.string().trim().email('Invalid email address format').optional().nullable().or(z.literal(''))
 });
 
-module.exports = {
+export {
+  createSupplierSchema,
+  updateSupplierSchema
+};
+
+export default {
   createSupplierSchema,
   updateSupplierSchema
 };

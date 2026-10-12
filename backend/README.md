@@ -4,10 +4,10 @@
 [![Express](https://img.shields.io/badge/Express-v5.0-blue.svg)](https://expressjs.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 [![Sequelize](https://img.shields.io/badge/Sequelize-ORM-52B0E7.svg)](https://sequelize.org/)
-[![OpenAI](https://img.shields.io/badge/OpenAI-Function%20Calling-412991.svg)](https://openai.com/)
+[![DeepSeek](https://img.shields.io/badge/DeepSeek-Function%20Calling-4D6BFE.svg)](https://deepseek.com/)
 [![License](https://img.shields.io/badge/License-ISC-brightgreen.svg)](LICENSE)
 
-**StockMaster AI** is a production-ready RESTful backend API designed to power mobile inventory management applications. Built on a clean **Model-View-Controller (MVC)** architecture with Node.js, Express 5, and PostgreSQL (via Sequelize ORM), StockMaster AI integrates an intelligent **AI Agent** using **OpenAI Function Calling** to perform controlled, read-only analytics, stock monitoring, and inventory recommendations over real PostgreSQL data—**without RAG, Vector DBs, or arbitrary SQL execution**.
+**StockMaster AI** is a production-ready RESTful backend API designed to power mobile inventory management applications. Built on a clean **Model-View-Controller (MVC)** architecture with Node.js, Express 5, and PostgreSQL (via Sequelize ORM), StockMaster AI integrates an intelligent **AI Agent** using **DeepSeek Function Calling** (`deepseek-chat`) to perform controlled, read-only analytics, stock monitoring, and inventory recommendations over real PostgreSQL data—**without RAG, Vector DBs, or arbitrary SQL execution**.
 
 ---
 
@@ -26,7 +26,7 @@
   * Stock modifications (`IN`, `OUT`, `ADJUSTMENT`) wrapped in isolated **Sequelize Transactions**.
   * Strict validation preventing negative inventory with automatic rollbacks.
 * **Intelligent AI Agent (Function Calling)**:
-  * Native tool use via OpenAI Function Calling (e.g. `getProductStock`, `getLowStockProducts`, `searchProducts`).
+  * Native tool use via DeepSeek Function Calling (e.g. `getProductStock`, `getLowStockProducts`, `searchProducts`).
   * Backend parameter validation (Zod) and role authorization before tool execution.
   * Server-Sent Events (**SSE**) streaming for responsive, token-by-token mobile chat experience.
 * **Security & Guardrails**:
@@ -85,7 +85,7 @@ ai.controller.js
         ↓
 ai/agent.js
         ↓
-OpenAI API (GPT-4o-mini with Tools)
+DeepSeek API (deepseek-chat with Tools)
         ↓
 Tool Calling Request (e.g., getLowStockProducts)
         ↓
@@ -141,8 +141,8 @@ stockmaster-ai-backend/
 │   │   ├── stockMovement.routes.js
 │   │   └── ai.routes.js
 │   ├── ai/
-│   │   ├── agent.js             # AI Agent orchestration & OpenAI streaming
-│   │   ├── tools.js             # OpenAI function definitions & Zod schemas
+│   │   ├── agent.js             # AI Agent orchestration & DeepSeek streaming
+│   │   ├── tools.js             # DeepSeek function definitions & Zod schemas
 │   │   ├── toolExecutor.js      # Secure Sequelize execution bridge
 │   │   ├── systemPrompt.js      # Grounding & safety instructions
 │   │   └── guardrails.js        # Prompt injection detection & output sanitizing
@@ -231,7 +231,9 @@ cp .env.example .env
 | `JWT_REFRESH_SECRET` | Secret key for signing Refresh Tokens | Required |
 | `JWT_ACCESS_EXPIRES_IN`| Lifespan of Access Token | `15m` |
 | `JWT_REFRESH_EXPIRES_IN`| Lifespan of Refresh Token | `7d` |
-| `OPENAI_API_KEY` | OpenAI API key for AI Agent | Optional (Offline fallback provided) |
+| `DEEPSEEK_API_KEY` | DeepSeek API key for AI Agent (`deepseek-chat`) | Optional (Offline fallback provided) |
+| `DEEPSEEK_BASE_URL` | DeepSeek API Base URL (defaults to `https://api.deepseek.com`) | `https://api.deepseek.com` |
+| `DEEPSEEK_MODEL` | DeepSeek Model identifier | `deepseek-chat` |
 | `CORS_ORIGIN` | Allowed CORS origins | `*` |
 
 ---

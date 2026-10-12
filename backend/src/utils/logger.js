@@ -1,6 +1,6 @@
-const winston = require('winston');
-const path = require('path');
-const fs = require('fs');
+import winston from 'winston';
+import path from 'path';
+import fs from 'fs';
 
 const logDir = path.resolve(process.cwd(), 'logs');
 if (!fs.existsSync(logDir)) {
@@ -101,7 +101,9 @@ logger.stream = {
   }
 };
 
-module.exports = {
+export {
   logger,
   aiAuditLogger
 };
+
+export default logger;

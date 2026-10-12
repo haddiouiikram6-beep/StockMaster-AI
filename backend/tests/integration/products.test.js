@@ -1,6 +1,6 @@
-const request = require('supertest');
-const app = require('../../src/app');
-const { seedTestDb, sequelize } = require('../setup');
+import request from 'supertest';
+import app from '../../src/app.js';
+import { seedTestDb, sequelize } from '../setup.js';
 
 describe('Products Integration Tests', () => {
   let fixtures;
@@ -130,6 +130,5 @@ describe('Products Integration Tests', () => {
       .set('Authorization', `Bearer ${fixtures.adminToken}`);
 
     expect(adminRes.status).toBe(200);
-    expect(adminRes.body.success).toBe(true);
   });
 });

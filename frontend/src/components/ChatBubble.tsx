@@ -4,15 +4,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { Message, ReorderRecommendation } from '../types';
 import { COLORS, SHADOWS } from '../constants/theme';
 import { ReorderCard } from './ReorderCard';
+import { CreatedProductCard } from './CreatedProductCard';
+import { FoundProductsCard } from './FoundProductsCard';
 
 interface ChatBubbleProps {
   message: Message;
   recommendations?: ReorderRecommendation[];
+  products?: any[];
+  createdProduct?: any;
 }
 
 export const ChatBubble: React.FC<ChatBubbleProps> = ({
   message,
   recommendations,
+  products = message.products,
+  createdProduct = message.createdProduct,
 }) => {
   const isUser = message.role === 'user';
 
@@ -47,6 +53,17 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
           <View style={styles.botBubble}>
             <Text style={styles.botText}>{message.content}</Text>
 
+            {/* Created Product Card */}
+            {createdProduct && (
+              <CreatedProductCard product={createdProduct} />
+            )}
+
+            {/* Found Products (Pinecone Vector Search) */}
+            {products && products.length > 0 && (
+              <FoundProductsCard products={products} />
+            )}
+
+            {/* Reorder Recommendations */}
             {recommendations && recommendations.length > 0 && (
               <View style={styles.recommendationsList}>
                 {recommendations.map((rec, idx) => (

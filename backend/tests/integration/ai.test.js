@@ -1,9 +1,9 @@
-const request = require('supertest');
-const app = require('../../src/app');
-const { seedTestDb, sequelize } = require('../setup');
-const { Conversation, Message } = require('../../src/models');
-const fs = require('fs');
-const path = require('path');
+import request from 'supertest';
+import app from '../../src/app.js';
+import { seedTestDb, sequelize } from '../setup.js';
+import { Conversation, Message } from '../../src/models/index.js';
+import fs from 'fs';
+import path from 'path';
 
 describe('AI Agent Integration Tests', () => {
   let fixtures;

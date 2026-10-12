@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 const createStockMovementSchema = z.object({
   productId: z.coerce.number().int().positive('Product ID must be a positive integer'),
@@ -20,7 +20,12 @@ const queryStockMovementSchema = z.object({
   order: z.enum(['asc', 'desc', 'ASC', 'DESC']).default('desc').transform(val => val.toUpperCase())
 });
 
-module.exports = {
+export {
+  createStockMovementSchema,
+  queryStockMovementSchema
+};
+
+export default {
   createStockMovementSchema,
   queryStockMovementSchema
 };

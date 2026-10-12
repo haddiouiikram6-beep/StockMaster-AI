@@ -1,14 +1,14 @@
-const { sequelize } = require('../config/database');
-const { Sequelize } = require('sequelize');
+import { Sequelize } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
-const User = require('./User');
-const RefreshToken = require('./RefreshToken');
-const Category = require('./Category');
-const Supplier = require('./Supplier');
-const Product = require('./Product');
-const StockMovement = require('./StockMovement');
-const Conversation = require('./Conversation');
-const Message = require('./Message');
+import User from './User.js';
+import RefreshToken from './RefreshToken.js';
+import Category from './Category.js';
+import Supplier from './Supplier.js';
+import Product from './Product.js';
+import StockMovement from './StockMovement.js';
+import Conversation from './Conversation.js';
+import Message from './Message.js';
 
 // User <-> RefreshToken
 User.hasMany(RefreshToken, { foreignKey: 'userId', as: 'refreshTokens', onDelete: 'CASCADE' });
@@ -38,7 +38,20 @@ Conversation.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Conversation.hasMany(Message, { foreignKey: 'conversationId', as: 'messages', onDelete: 'CASCADE' });
 Message.belongsTo(Conversation, { foreignKey: 'conversationId', as: 'conversation' });
 
-module.exports = {
+export {
+  sequelize,
+  Sequelize,
+  User,
+  RefreshToken,
+  Category,
+  Supplier,
+  Product,
+  StockMovement,
+  Conversation,
+  Message
+};
+
+export default {
   sequelize,
   Sequelize,
   User,

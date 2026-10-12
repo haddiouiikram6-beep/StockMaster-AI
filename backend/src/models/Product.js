@@ -1,5 +1,5 @@
-const { DataTypes, Model } = require('sequelize');
-const { sequelize } = require('../config/database');
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
 class Product extends Model {
   isLowStock() {
@@ -103,4 +103,5 @@ Product.init(
   }
 );
 
-module.exports = Product;
+export { Product };
+export default Product;

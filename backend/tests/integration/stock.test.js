@@ -1,7 +1,7 @@
-const request = require('supertest');
-const app = require('../../src/app');
-const { Product, StockMovement } = require('../../src/models');
-const { seedTestDb, sequelize } = require('../setup');
+import request from 'supertest';
+import app from '../../src/app.js';
+import { Product, StockMovement } from '../../src/models/index.js';
+import { seedTestDb, sequelize } from '../setup.js';
 
 describe('Stock Movement & Transaction Integration Tests', () => {
   let fixtures;

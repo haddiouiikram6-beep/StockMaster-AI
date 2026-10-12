@@ -1,7 +1,7 @@
-const { Op, col, where } = require('sequelize');
-const { Product, Category, Supplier, StockMovement, User, sequelize } = require('../models');
-const { tools } = require('./tools');
-const { logger } = require('../utils/logger');
+import { Op, col, where } from 'sequelize';
+import { Product, Category, Supplier, StockMovement, User, sequelize } from '../models/index.js';
+import { tools } from './tools.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Maps and executes authorized AI tools against Sequelize models
@@ -439,6 +439,99 @@ class ToolExecutor {
           };
         }
 
+        case 'createProduct': {
+          let categoryId = validatedArgs.categoryId;
+          let categoryName = validatedArgs.categoryName;
+
+          if (!categoryId && categoryName) {
+            let cat = await Category.findOne({
+              where: { name: { [likeOp]: categoryName.trim() } }
+            });
+            if (!cat) {
+              cat = await Category.create({
+                name: categoryName.trim(),
+                description: `Catégorie créée automatiquement pour ${validatedArgs.name}`
+              });
+            }
+            categoryId = cat.id;
+            categoryName = cat.name;
+          }
+
+          if (!categoryId) {
+            let defaultCat = await Category.findOne();
+            if (!defaultCat) {
+              defaultCat = await Category.create({ name: 'Général', description: 'Catégorie par défaut' });
+            }
+            categoryId = defaultCat.id;
+            categoryName = defaultCat.name;
+          }
+
+          const reference = validatedArgs.reference && validatedArgs.reference.trim() !== ''
+            ? validatedArgs.reference.trim()
+            : `PRD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`;
+
+          const newProduct = await Product.create({
+            name: validatedArgs.name.trim(),
+            reference,
+            price: validatedArgs.price,
+            quantity: validatedArgs.quantity ?? 0,
+            minStock: validatedArgs.minStock ?? 5,
+            categoryId,
+            description: validatedArgs.description || null
+          });
+
+          return {
+            success: true,
+            created: true,
+            product: {
+              id: newProduct.id,
+              name: newProduct.name,
+              reference: newProduct.reference,
+              price: parseFloat(newProduct.price),
+              quantity: newProduct.quantity,
+              minStock: newProduct.minStock,
+              categoryId,
+              category: categoryName,
+              description: newProduct.description
+            }
+          };
+        }
+
+        case 'vectorSearchProducts': {
+          const q = validatedArgs.query;
+          const keywords = q.split(/\s+/).filter(w => w.length > 1);
+          const orConditions = [
+            { name: { [likeOp]: `%${q}%` } },
+            { reference: { [likeOp]: `%${q}%` } },
+            { description: { [likeOp]: `%${q}%` } }
+          ];
+
+          for (const kw of keywords) {
+            orConditions.push({ name: { [likeOp]: `%${kw}%` } });
+          }
+
+          const products = await Product.findAll({
+            where: { [Op.or]: orConditions },
+            limit: validatedArgs.limit || 10,
+            include: [{ model: Category, as: 'category', attributes: ['id', 'name'] }]
+          });
+
+          return {
+            query: q,
+            count: products.length,
+            products: products.map(p => ({
+              id: p.id,
+              name: p.name,
+              reference: p.reference,
+              price: parseFloat(p.price),
+              quantity: p.quantity,
+              minStock: p.minStock,
+              category: p.category ? p.category.name : 'Unassigned',
+              description: p.description || ''
+            }))
+          };
+        }
+
         default:
           return { error: true, message: `Tool execution handler not found for '${toolName}'.` };
       }
@@ -452,4 +545,5 @@ class ToolExecutor {
   }
 }
 
-module.exports = ToolExecutor;
+export { ToolExecutor };
+export default ToolExecutor;

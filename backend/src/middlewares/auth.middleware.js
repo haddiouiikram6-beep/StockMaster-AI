@@ -1,5 +1,5 @@
-const { verifyAccessToken } = require('../utils/jwt');
-const { User } = require('../models');
+import { verifyAccessToken } from '../utils/jwt.js';
+import { User } from '../models/index.js';
 
 /**
  * Authentication middleware to verify JWT Bearer token
@@ -70,7 +70,12 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = {
+export {
+  authenticate,
+  authorize
+};
+
+export default {
   authenticate,
   authorize
 };

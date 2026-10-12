@@ -1,5 +1,5 @@
-const ToolExecutor = require('../../src/ai/toolExecutor');
-const { seedTestDb, sequelize } = require('../setup');
+import ToolExecutor from '../../src/ai/toolExecutor.js';
+import { seedTestDb, sequelize } from '../setup.js';
 
 describe('ToolExecutor Unit Tests', () => {
   let fixtures;

@@ -1,9 +1,9 @@
-const {
+import {
   generateAccessToken,
   generateRefreshToken,
   verifyAccessToken,
   verifyRefreshToken
-} = require('../../src/utils/jwt');
+} from '../../src/utils/jwt.js';
 
 describe('JWT Utility', () => {
   const payload = { id: 1, email: 'user@example.com', role: 'employee' };

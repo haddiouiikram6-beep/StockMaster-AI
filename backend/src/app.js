@@ -1,37 +1,32 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const path = require('path');
-const swaggerUi = require('swagger-ui-express');
-const YAML = require('yamljs');
+import express from 'express';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
 
-const env = require('./config/env');
-const { logger } = require('./utils/logger');
-const errorHandler = require('./middlewares/errorHandler.middleware');
-const { apiLimiter } = require('./middlewares/rateLimit.middleware');
+import env from './config/env.js';
+import { logger } from './utils/logger.js';
+import errorHandler from './middlewares/errorHandler.middleware.js';
+import { apiLimiter } from './middlewares/rateLimit.middleware.js';
 
 // Routes
-const authRoutes = require('./routes/auth.routes');
-const categoryRoutes = require('./routes/category.routes');
-const supplierRoutes = require('./routes/supplier.routes');
-const productRoutes = require('./routes/product.routes');
-const stockMovementRoutes = require('./routes/stockMovement.routes');
-const aiRoutes = require('./routes/ai.routes');
+import authRoutes from './routes/auth.routes.js';
+import categoryRoutes from './routes/category.routes.js';
+import supplierRoutes from './routes/supplier.routes.js';
+import productRoutes from './routes/product.routes.js';
+import stockMovementRoutes from './routes/stockMovement.routes.js';
+import aiRoutes from './routes/ai.routes.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // Security Headers
 app.use(helmet({
   contentSecurityPolicy: false // Allow Swagger UI assets
-}));
-
-// CORS Configuration
-app.use(cors({
-  origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
 // Request Parsers
@@ -83,4 +78,5 @@ app.use((req, res) => {
 // Global Error Handler
 app.use(errorHandler);
 
-module.exports = app;
+export { app };
+export default app;

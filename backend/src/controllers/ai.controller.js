@@ -1,5 +1,5 @@
-const aiAgent = require('../ai/agent');
-const { Conversation, Message } = require('../models');
+import aiAgent from '../ai/agent.js';
+import { Conversation, Message } from '../models/index.js';
 
 /**
  * AI Chat endpoint supporting standard JSON and SSE Streaming
@@ -28,7 +28,14 @@ const chat = async (req, res, next) => {
         }
       });
 
-      res.write(`data: ${JSON.stringify({ conversationId: result.conversationId, toolsExecuted: result.toolsExecuted, done: true })}\n\n`);
+      res.write(`data: ${JSON.stringify({
+        conversationId: result.conversationId,
+        toolsExecuted: result.toolsExecuted,
+        products: result.products || [],
+        createdProduct: result.createdProduct || null,
+        recommendations: result.recommendations || [],
+        done: true
+      })}\n\n`);
       res.write('data: [DONE]\n\n');
       return res.end();
     } catch (err) {
@@ -49,7 +56,10 @@ const chat = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: result
+      data: {
+        ...result,
+        answer: result.reply
+      }
     });
   } catch (error) {
     next(error);
@@ -117,7 +127,13 @@ const getConversationById = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
+  chat,
+  getConversations,
+  getConversationById
+};
+
+export default {
   chat,
   getConversations,
   getConversationById

@@ -37,9 +37,9 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-stockmaster_jwt_secret_refresh_production_key_2026}
       JWT_ACCESS_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-${OPENAI_API_KEY:-}}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-${OPENAI_BASE_URL:-https://api.deepseek.com}}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-${OPENAI_MODEL:-deepseek-chat}}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
     ports:
       - "3000:3000"

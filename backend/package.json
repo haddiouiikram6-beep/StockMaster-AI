@@ -2,13 +2,14 @@
   "name": "stockmaster-ai-backend",
   "version": "1.0.0",
   "description": "Production-ready backend for StockMaster AI mobile application with AI Agent function calling",
+  "type": "module",
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test": "jest --runInBand --detectOpenHandles --forceExit",
-    "test:watch": "jest --watch",
-    "lint": "node -e \"const fs = require('fs'), path = require('path'), { execSync } = require('child_process'); function walk(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else if (f.endsWith('.js')) execSync('node -c \\\"' + p + '\\\"'); } } walk('src'); console.log('Syntax check passed!');\"",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles --forceExit",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "lint": "node -e \"import fs from 'node:fs'; import path from 'node:path'; import { execSync } from 'node:child_process'; function walk(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else if (f.endsWith('.js')) execSync('node -c \\\"' + p + '\\\"'); } } walk('src'); console.log('Syntax check passed!');\"",
     "db:migrate": "npx sequelize-cli db:migrate",
     "db:migrate:undo": "npx sequelize-cli db:migrate:undo",
     "db:seed": "npx sequelize-cli db:seed:all",
@@ -26,8 +27,9 @@
   "author": "StockMaster AI Team",
   "license": "ISC",
   "dependencies": {
+    "@pinecone-database/pinecone": "^9.0.0",
     "bcryptjs": "^3.0.2",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.7",
     "express": "^5.0.1",
     "express-rate-limit": "^7.5.0",
@@ -52,6 +54,10 @@
   "jest": {
     "testEnvironment": "node",
     "testTimeout": 30000,
-    "verbose": true
+    "verbose": true,
+    "setupFiles": [
+      "<rootDir>/tests/env.js"
+    ],
+    "transform": {}
   }
 }

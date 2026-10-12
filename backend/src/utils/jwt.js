@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const env = require('../config/env');
+import jwt from 'jsonwebtoken';
+import env from '../config/env.js';
 
 /**
  * Generate short-lived Access Token
@@ -41,7 +41,14 @@ const verifyRefreshToken = (token) => {
   return jwt.verify(token, env.JWT_REFRESH_SECRET);
 };
 
-module.exports = {
+export {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyAccessToken,
+  verifyRefreshToken
+};
+
+export default {
   generateAccessToken,
   generateRefreshToken,
   verifyAccessToken,

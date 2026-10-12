@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import * as productController from '../controllers/product.controller.js';
+import validate from '../middlewares/validate.middleware.js';
+import { createProductSchema, updateProductSchema, queryProductSchema } from '../validators/product.validator.js';
+import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+
 const router = express.Router();
-const productController = require('../controllers/product.controller');
-const validate = require('../middlewares/validate.middleware');
-const { createProductSchema, updateProductSchema, queryProductSchema } = require('../validators/product.validator');
-const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 router.get('/', authenticate, validate(queryProductSchema, 'query'), productController.getAllProducts);
 router.get('/:id', authenticate, productController.getProductById);
@@ -11,4 +12,4 @@ router.post('/', authenticate, authorize('admin', 'manager'), validate(createPro
 router.put('/:id', authenticate, authorize('admin', 'manager'), validate(updateProductSchema), productController.updateProduct);
 router.delete('/:id', authenticate, authorize('admin'), productController.deleteProduct);
 
-module.exports = router;
+export default router;

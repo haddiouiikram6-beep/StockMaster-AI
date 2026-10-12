@@ -1,7 +1,7 @@
-const app = require('./app');
-const env = require('./config/env');
-const { sequelize } = require('./config/database');
-const { logger } = require('./utils/logger');
+import app from './app.js';
+import env from './config/env.js';
+import { sequelize } from './config/database.js';
+import { logger } from './utils/logger.js';
 
 const PORT = env.PORT || 3000;
 
@@ -55,3 +55,6 @@ const startServer = async () => {
 };
 
 startServer();
+
+export { startServer };
+export default startServer;

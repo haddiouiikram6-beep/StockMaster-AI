@@ -30,7 +30,12 @@ export default function AIAssistantScreen() {
 
   // Preload initial messages from reference design so screen starts visually stunning
   const [messages, setMessages] = useState<
-    Array<{ message: Message; recommendations?: ReorderRecommendation[] }>
+    Array<{
+      message: Message;
+      recommendations?: ReorderRecommendation[];
+      products?: any[];
+      createdProduct?: any;
+    }>
   >([
     {
       message: {
@@ -114,7 +119,14 @@ export default function AIAssistantScreen() {
       onToolsExecuted: (tools) => {
         setStreamingTools(tools);
       },
-      onComplete: ({ conversationId: newConvId, fullAnswer, toolsExecuted, recommendations }) => {
+      onComplete: ({
+        conversationId: newConvId,
+        fullAnswer,
+        toolsExecuted,
+        recommendations,
+        products,
+        createdProduct,
+      }) => {
         setConversationId(newConvId);
         setIsGenerating(false);
         setStreamingText('');
@@ -127,9 +139,13 @@ export default function AIAssistantScreen() {
               role: 'assistant',
               content: fullAnswer,
               toolsExecuted: toolsExecuted && toolsExecuted.length > 0 ? toolsExecuted : undefined,
+              products: products && products.length > 0 ? products : undefined,
+              createdProduct: createdProduct || undefined,
               createdAt: new Date().toISOString(),
             },
             recommendations: recommendations && recommendations.length > 0 ? recommendations : undefined,
+            products: products && products.length > 0 ? products : undefined,
+            createdProduct: createdProduct || undefined,
           },
         ]);
       },
@@ -188,6 +204,8 @@ export default function AIAssistantScreen() {
               key={index}
               message={item.message}
               recommendations={item.recommendations}
+              products={item.products || item.message.products}
+              createdProduct={item.createdProduct || item.message.createdProduct}
             />
           ))}
 
@@ -210,6 +228,16 @@ export default function AIAssistantScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chipsScroll}
           >
+            <SuggestionChip
+              label="Recherche Vectorielle Pinecone"
+              icon="git-network-outline"
+              onPress={() => handleSendMessage('Trouve des câbles pour écran et des accessoires avec la recherche vectorielle Pinecone')}
+            />
+            <SuggestionChip
+              label="Créer un Produit"
+              icon="add-circle-outline"
+              onPress={() => handleSendMessage('Crée un nouveau produit Écran 4K Ultra au prix de 3499 DH dans la catégorie Électronique')}
+            />
             <SuggestionChip
               label="Stock faible"
               icon="alert-circle-outline"

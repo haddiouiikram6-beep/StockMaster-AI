@@ -62,6 +62,8 @@ export interface Message {
   content: string;
   toolsExecuted?: string[];
   createdAt?: string;
+  products?: any[];
+  createdProduct?: any;
 }
 
 export interface Conversation {
@@ -89,6 +91,8 @@ export interface AIResponse {
   answer: string;
   toolsExecuted?: string[];
   recommendations?: ReorderRecommendation[];
+  products?: any[];
+  createdProduct?: any;
 }
 
 export interface Pagination {

@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 const registerSchema = z.object({
   fullName: z.string().trim().min(2, 'Full name must be at least 2 characters long'),
@@ -15,7 +15,13 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required')
 });
 
-module.exports = {
+export {
+  registerSchema,
+  loginSchema,
+  refreshTokenSchema
+};
+
+export default {
   registerSchema,
   loginSchema,
   refreshTokenSchema

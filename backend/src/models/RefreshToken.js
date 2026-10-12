@@ -1,5 +1,5 @@
-const { DataTypes, Model } = require('sequelize');
-const { sequelize } = require('../config/database');
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
 class RefreshToken extends Model {
   isExpired() {
@@ -57,4 +57,5 @@ RefreshToken.init(
   }
 );
 
-module.exports = RefreshToken;
+export { RefreshToken };
+export default RefreshToken;

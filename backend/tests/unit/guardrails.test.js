@@ -1,4 +1,4 @@
-const { checkPromptInjection, sanitizeOutput } = require('../../src/ai/guardrails');
+import { checkPromptInjection, sanitizeOutput } from '../../src/ai/guardrails.js';
 
 describe('AI Guardrails & Prompt Injection Protection', () => {
   it('should detect and block "ignore previous instructions"', () => {

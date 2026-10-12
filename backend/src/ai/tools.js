@@ -1,4 +1,4 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
 /**
  * Tool definitions conforming to OpenAI Function Calling standard,
@@ -296,13 +296,99 @@ const tools = [
     },
     schema: z.object({}),
     allowedRoles: ['admin', 'manager', 'employee']
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'createProduct',
+      description: 'Create a new product in the inventory catalog and automatically index it into the Pinecone vector database for semantic search.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'The name of the new product.'
+          },
+          reference: {
+            type: 'string',
+            description: 'The unique SKU reference code of the product (optional, auto-generated if omitted).'
+          },
+          price: {
+            type: 'number',
+            description: 'The unit selling price of the product in DH.'
+          },
+          quantity: {
+            type: 'integer',
+            description: 'Initial stock quantity on hand (default 0).'
+          },
+          minStock: {
+            type: 'integer',
+            description: 'Minimum stock alert threshold (default 5).'
+          },
+          categoryId: {
+            type: 'integer',
+            description: 'Category ID of the product.'
+          },
+          categoryName: {
+            type: 'string',
+            description: 'Category name (used if categoryId is omitted).'
+          },
+          description: {
+            type: 'string',
+            description: 'Optional description of the product and its use-cases.'
+          }
+        },
+        required: ['name', 'price']
+      }
+    },
+    schema: z.object({
+      name: z.string().trim().min(1, 'Product name is required'),
+      reference: z.string().trim().optional(),
+      price: z.number().nonnegative('Price must be >= 0'),
+      quantity: z.number().int().nonnegative().optional().default(0),
+      minStock: z.number().int().nonnegative().optional().default(5),
+      categoryId: z.number().int().positive().optional(),
+      categoryName: z.string().trim().optional(),
+      description: z.string().trim().optional()
+    }),
+    allowedRoles: ['admin', 'manager', 'employee']
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'vectorSearchProducts',
+      description: 'Perform semantic vector similarity search in the Pinecone vector database for products matching natural language queries, use-cases, or semantic attributes.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Natural language search query or keywords describing what the user wants.'
+          },
+          limit: {
+            type: 'integer',
+            description: 'Maximum number of results to return (default 10).'
+          }
+        },
+        required: ['query']
+      }
+    },
+    schema: z.object({
+      query: z.string().trim().min(1, 'Search query cannot be empty'),
+      limit: z.number().int().positive().max(50).optional().default(10)
+    }),
+    allowedRoles: ['admin', 'manager', 'employee']
   }
 ];
 
-// OpenAi Function formats
-const openAiTools = tools.map(({ type, function: fn }) => ({ type, function: fn }));
+// DeepSeek / OpenAI Function formats
+const deepSeekTools = tools.map(({ type, function: fn }) => ({ type, function: fn }));
+const openAiTools = deepSeekTools; // Alias for backward compatibility
 
-module.exports = {
+export {
   tools,
+  deepSeekTools,
   openAiTools
 };
+
+export default tools;

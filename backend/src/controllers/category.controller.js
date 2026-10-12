@@ -1,4 +1,4 @@
-const { Category, Product } = require('../models');
+import { Category, Product } from '../models/index.js';
 
 /**
  * Get all categories
@@ -158,7 +158,15 @@ const deleteCategory = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
+  getAllCategories,
+  getCategoryById,
+  createCategory,
+  updateCategory,
+  deleteCategory
+};
+
+export default {
   getAllCategories,
   getCategoryById,
   createCategory,

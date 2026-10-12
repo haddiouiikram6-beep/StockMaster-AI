@@ -1,5 +1,5 @@
-const { StockMovement, Product, User, sequelize } = require('../models');
-const { logger } = require('../utils/logger');
+import { StockMovement, Product, User, sequelize } from '../models/index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Get all stock movements with pagination and filters
@@ -162,7 +162,13 @@ const createStockMovement = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
+  getAllStockMovements,
+  getStockMovementById,
+  createStockMovement
+};
+
+export default {
   getAllStockMovements,
   getStockMovementById,
   createStockMovement
