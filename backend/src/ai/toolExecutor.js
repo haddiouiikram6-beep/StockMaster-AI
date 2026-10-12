@@ -1,29 +1,51 @@
-import { Op, col, where } from 'sequelize';
-import { Product, Category, Supplier, StockMovement, User, sequelize } from '../models/index.js';
 import { tools } from './tools.js';
 import { logger } from '../utils/logger.js';
+import {
+  handleGetInventorySummary,
+  handleGetCategories,
+  handleGetSuppliers,
+  handleGetStockMovements,
+  handleGetSupplierInfo,
+  handleGetProductsByCategory,
+  handleAnalyzeStock
+} from './executors/inventoryHandlers.js';
+import {
+  handleGetProductStock,
+  handleGetProductInfo,
+  handleSearchProducts,
+  handleCreateProduct,
+  handleVectorSearchProducts
+} from './executors/productHandlers.js';
+import {
+  handleGetLowStockProducts,
+  handleRecommendReorder
+} from './executors/reorderHandlers.js';
 
-/**
- * Maps and executes authorized AI tools against Sequelize models
- */
+const toolHandlers = {
+  getInventorySummary: handleGetInventorySummary,
+  getCategories: handleGetCategories,
+  getSuppliers: handleGetSuppliers,
+  getStockMovements: handleGetStockMovements,
+  getSupplierInfo: handleGetSupplierInfo,
+  getProductsByCategory: handleGetProductsByCategory,
+  analyzeStock: handleAnalyzeStock,
+  getProductStock: handleGetProductStock,
+  getProductInfo: handleGetProductInfo,
+  getLowStockProducts: handleGetLowStockProducts,
+  recommendReorder: handleRecommendReorder,
+  searchProducts: handleSearchProducts,
+  createProduct: handleCreateProduct,
+  vectorSearchProducts: handleVectorSearchProducts
+};
+
 class ToolExecutor {
-  /**
-   * Executes a requested tool by name with arguments and user context
-   * @param {string} toolName 
-   * @param {object} rawArgs 
-   * @param {object} userContext 
-   */
   static async execute(toolName, rawArgs = {}, userContext = {}) {
     const toolDef = tools.find(t => t.function.name === toolName);
 
     if (!toolDef) {
-      return {
-        error: true,
-        message: `Tool '${toolName}' is not recognized or supported.`
-      };
+      return { error: true, message: `Tool '${toolName}' is not recognized or supported.` };
     }
 
-    // Role-based authorization check for tool
     if (toolDef.allowedRoles && userContext.role) {
       if (!toolDef.allowedRoles.includes(userContext.role)) {
         return {
@@ -33,508 +55,21 @@ class ToolExecutor {
       }
     }
 
-    // Validate parameters schema using Zod
     let validatedArgs;
     try {
       validatedArgs = await toolDef.schema.parseAsync(rawArgs);
     } catch (valErr) {
-      return {
-        error: true,
-        message: `Invalid parameters for tool '${toolName}': ${valErr.errors ? valErr.errors.map(e => e.message).join(', ') : valErr.message}`
-      };
+      const details = valErr.errors ? valErr.errors.map(e => e.message).join(', ') : valErr.message;
+      return { error: true, message: `Invalid parameters for tool '${toolName}': ${details}` };
     }
 
-    // Dialect-aware LIKE operator
-    const isPostgres = sequelize.getDialect() === 'postgres';
-    const likeOp = isPostgres ? Op.iLike : Op.like;
+    const handler = toolHandlers[toolName];
+    if (!handler) {
+      return { error: true, message: `Tool execution handler not found for '${toolName}'.` };
+    }
 
     try {
-      switch (toolName) {
-        case 'getProductStock': {
-          const condition = {};
-          if (validatedArgs.productId) {
-            condition.id = validatedArgs.productId;
-          } else if (validatedArgs.reference) {
-            condition.reference = validatedArgs.reference;
-          }
-
-          const product = await Product.findOne({
-            where: condition,
-            attributes: ['id', 'name', 'reference', 'quantity', 'minStock']
-          });
-
-          if (!product) {
-            return { found: false, message: 'Product not found with provided criteria.' };
-          }
-
-          const isLow = product.quantity <= product.minStock;
-          const status = product.quantity === 0 ? 'OUT_OF_STOCK' : (isLow ? 'LOW_STOCK' : 'IN_STOCK');
-
-          return {
-            found: true,
-            productId: product.id,
-            name: product.name,
-            reference: product.reference,
-            quantity: product.quantity,
-            minStock: product.minStock,
-            status,
-            isLowStock: isLow
-          };
-        }
-
-        case 'getProductInfo': {
-          const conditions = [];
-          if (validatedArgs.productId) {
-            conditions.push({ id: validatedArgs.productId });
-          }
-          if (validatedArgs.reference) {
-            conditions.push({ reference: validatedArgs.reference });
-          }
-          if (validatedArgs.name) {
-            conditions.push({ name: { [likeOp]: `%${validatedArgs.name}%` } });
-          }
-
-          const product = await Product.findOne({
-            where: conditions.length > 0 ? { [Op.or]: conditions } : {},
-            include: [
-              { model: Category, as: 'category', attributes: ['id', 'name'] },
-              { model: Supplier, as: 'supplier', attributes: ['id', 'name', 'email', 'phone'] }
-            ]
-          });
-
-          if (!product) {
-            return { found: false, message: 'No matching product found.' };
-          }
-
-          return {
-            found: true,
-            id: product.id,
-            name: product.name,
-            reference: product.reference,
-            description: product.description,
-            price: parseFloat(product.price),
-            quantity: product.quantity,
-            minStock: product.minStock,
-            isLowStock: product.quantity <= product.minStock,
-            category: product.category ? product.category.name : 'Unassigned',
-            supplier: product.supplier ? product.supplier.name : 'Unassigned'
-          };
-        }
-
-        case 'getLowStockProducts': {
-          const limit = validatedArgs.limit || 20;
-
-          const products = await Product.findAll({
-            where: where(col('quantity'), '<=', col('minStock')),
-            include: [{ model: Category, as: 'category', attributes: ['id', 'name'] }],
-            limit,
-            order: [['quantity', 'ASC']]
-          });
-
-          return {
-            count: products.length,
-            products: products.map(p => ({
-              id: p.id,
-              name: p.name,
-              reference: p.reference,
-              quantity: p.quantity,
-              minStock: p.minStock,
-              deficit: p.minStock - p.quantity,
-              category: p.category ? p.category.name : 'Unassigned'
-            }))
-          };
-        }
-
-        case 'recommendReorder': {
-          const limit = validatedArgs.limit || 20;
-          const targetMultiplier = validatedArgs.targetMultiplier || 2;
-          const conditions = [];
-
-          if (validatedArgs.productId) {
-            conditions.push({ id: validatedArgs.productId });
-          } else {
-            conditions.push(where(col('quantity'), '<=', col('minStock')));
-          }
-
-          if (validatedArgs.categoryId) {
-            conditions.push({ categoryId: validatedArgs.categoryId });
-          }
-
-          if (validatedArgs.supplierId) {
-            conditions.push({ supplierId: validatedArgs.supplierId });
-          }
-
-          const whereClause = conditions.length === 1 ? conditions[0] : { [Op.and]: conditions };
-
-          const products = await Product.findAll({
-            where: whereClause,
-            include: [
-              { model: Category, as: 'category', attributes: ['id', 'name'] },
-              { model: Supplier, as: 'supplier', attributes: ['id', 'name', 'email', 'phone'] }
-            ],
-            limit,
-            order: [['quantity', 'ASC']]
-          });
-
-          let totalUnitsToOrder = 0;
-          let totalEstimatedCost = 0;
-          let criticalCount = 0;
-          let highCount = 0;
-
-          const recommendations = products.map(p => {
-            const unitPrice = parseFloat(p.price) || 0;
-            const targetStock = Math.ceil(p.minStock * targetMultiplier);
-            const suggestedQuantity = Math.max(targetStock - p.quantity, p.minStock);
-            const estimatedCost = parseFloat((suggestedQuantity * unitPrice).toFixed(2));
-
-            let priority = 'MEDIUM';
-            let urgencyReason = 'Stock is at or below minimum threshold';
-            if (p.quantity === 0) {
-              priority = 'CRITICAL';
-              urgencyReason = 'Out of stock - immediate replenishment required';
-              criticalCount++;
-            } else if (p.quantity <= Math.ceil(p.minStock / 2)) {
-              priority = 'HIGH';
-              urgencyReason = 'Stock severely depleted below 50% of minimum threshold';
-              highCount++;
-            } else if (p.quantity > p.minStock) {
-              priority = 'LOW';
-              urgencyReason = 'Stock level is currently adequate; preventive reorder only';
-            }
-
-            totalUnitsToOrder += suggestedQuantity;
-            totalEstimatedCost += estimatedCost;
-
-            return {
-              productId: p.id,
-              name: p.name,
-              reference: p.reference,
-              currentQuantity: p.quantity,
-              minStock: p.minStock,
-              deficit: Math.max(0, p.minStock - p.quantity),
-              targetStock,
-              suggestedQuantity,
-              unitPrice,
-              estimatedCost,
-              priority,
-              urgencyReason,
-              category: p.category ? p.category.name : 'Unassigned',
-              supplier: p.supplier
-                ? {
-                    id: p.supplier.id,
-                    name: p.supplier.name,
-                    email: p.supplier.email,
-                    phone: p.supplier.phone
-                  }
-                : null
-            };
-          });
-
-          const priorityRank = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-          recommendations.sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority]);
-
-          return {
-            totalItemsToReorder: recommendations.length,
-            totalUnitsToOrder,
-            totalEstimatedCost: parseFloat(totalEstimatedCost.toFixed(2)),
-            criticalCount,
-            highCount,
-            recommendations
-          };
-        }
-
-        case 'getStockMovements': {
-          const whereClause = {};
-          if (validatedArgs.productId) {
-            whereClause.productId = validatedArgs.productId;
-          }
-          if (validatedArgs.type) {
-            whereClause.type = validatedArgs.type;
-          }
-
-          const movements = await StockMovement.findAll({
-            where: whereClause,
-            include: [
-              { model: Product, as: 'product', attributes: ['id', 'name', 'reference'] },
-              { model: User, as: 'user', attributes: ['id', 'fullName', 'email'] }
-            ],
-            limit: validatedArgs.limit || 10,
-            order: [['date', 'DESC']]
-          });
-
-          return {
-            count: movements.length,
-            movements: movements.map(m => ({
-              id: m.id,
-              type: m.type,
-              quantity: m.quantity,
-              reason: m.reason,
-              date: m.date,
-              product: m.product ? `${m.product.name} (${m.product.reference})` : 'Unknown',
-              performedBy: m.user ? m.user.fullName : 'System'
-            }))
-          };
-        }
-
-        case 'getSupplierInfo': {
-          const condition = {};
-          if (validatedArgs.supplierId) {
-            condition.id = validatedArgs.supplierId;
-          } else if (validatedArgs.name) {
-            condition.name = { [likeOp]: `%${validatedArgs.name}%` };
-          }
-
-          const supplier = await Supplier.findOne({
-            where: condition,
-            include: [
-              {
-                model: Product,
-                as: 'products',
-                attributes: ['id', 'name', 'reference', 'price', 'quantity']
-              }
-            ]
-          });
-
-          if (!supplier) {
-            return { found: false, message: 'Supplier not found.' };
-          }
-
-          return {
-            found: true,
-            id: supplier.id,
-            name: supplier.name,
-            phone: supplier.phone,
-            email: supplier.email,
-            productCount: supplier.products.length,
-            products: supplier.products.map(p => ({
-              id: p.id,
-              name: p.name,
-              reference: p.reference,
-              price: parseFloat(p.price),
-              quantity: p.quantity
-            }))
-          };
-        }
-
-        case 'getProductsByCategory': {
-          let category;
-          if (validatedArgs.categoryId) {
-            category = await Category.findByPk(validatedArgs.categoryId);
-          } else if (validatedArgs.categoryName) {
-            category = await Category.findOne({
-              where: { name: { [likeOp]: `%${validatedArgs.categoryName}%` } }
-            });
-          }
-
-          if (!category) {
-            return { found: false, message: 'Category not found.' };
-          }
-
-          const products = await Product.findAll({
-            where: { categoryId: category.id },
-            limit: validatedArgs.limit || 20,
-            attributes: ['id', 'name', 'reference', 'price', 'quantity', 'minStock']
-          });
-
-          return {
-            found: true,
-            category: {
-              id: category.id,
-              name: category.name,
-              description: category.description
-            },
-            count: products.length,
-            products: products.map(p => ({
-              id: p.id,
-              name: p.name,
-              reference: p.reference,
-              price: parseFloat(p.price),
-              quantity: p.quantity,
-              minStock: p.minStock
-            }))
-          };
-        }
-
-        case 'searchProducts': {
-          const q = validatedArgs.query;
-          const products = await Product.findAll({
-            where: {
-              [Op.or]: [
-                { name: { [likeOp]: `%${q}%` } },
-                { reference: { [likeOp]: `%${q}%` } },
-                { description: { [likeOp]: `%${q}%` } }
-              ]
-            },
-            limit: validatedArgs.limit || 10,
-            include: [{ model: Category, as: 'category', attributes: ['id', 'name'] }]
-          });
-
-          return {
-            query: q,
-            count: products.length,
-            products: products.map(p => ({
-              id: p.id,
-              name: p.name,
-              reference: p.reference,
-              price: parseFloat(p.price),
-              quantity: p.quantity,
-              category: p.category ? p.category.name : 'Unassigned'
-            }))
-          };
-        }
-
-        case 'getInventorySummary': {
-          const products = await Product.findAll();
-          let totalValue = 0;
-          let totalItems = 0;
-          let lowStockCount = 0;
-          
-          for (const p of products) {
-            totalItems += p.quantity;
-            totalValue += parseFloat(p.price) * p.quantity;
-            if (p.quantity <= p.minStock) lowStockCount++;
-          }
-          
-          return {
-            totalProducts: products.length,
-            totalItems,
-            totalValue: parseFloat(totalValue.toFixed(2)),
-            lowStockCount
-          };
-        }
-
-        case 'getCategories': {
-          const categories = await Category.findAll({ attributes: ['id', 'name', 'description'] });
-          return {
-            count: categories.length,
-            categories
-          };
-        }
-
-        case 'getSuppliers': {
-          const suppliers = await Supplier.findAll({ attributes: ['id', 'name', 'email', 'phone'] });
-          return {
-            count: suppliers.length,
-            suppliers
-          };
-        }
-
-        case 'analyzeStock': {
-          // Find critical products
-          const products = await Product.findAll({
-            where: where(col('quantity'), '<=', col('minStock')),
-            order: [['quantity', 'ASC']],
-            limit: 10
-          });
-          
-          return {
-            issuesCount: products.length,
-            criticalProducts: products.map(p => ({
-              id: p.id,
-              name: p.name,
-              quantity: p.quantity,
-              minStock: p.minStock,
-              status: p.quantity === 0 ? 'OUT_OF_STOCK' : 'LOW_STOCK'
-            }))
-          };
-        }
-
-        case 'createProduct': {
-          let categoryId = validatedArgs.categoryId;
-          let categoryName = validatedArgs.categoryName;
-
-          if (!categoryId && categoryName) {
-            let cat = await Category.findOne({
-              where: { name: { [likeOp]: categoryName.trim() } }
-            });
-            if (!cat) {
-              cat = await Category.create({
-                name: categoryName.trim(),
-                description: `Catégorie créée automatiquement pour ${validatedArgs.name}`
-              });
-            }
-            categoryId = cat.id;
-            categoryName = cat.name;
-          }
-
-          if (!categoryId) {
-            let defaultCat = await Category.findOne();
-            if (!defaultCat) {
-              defaultCat = await Category.create({ name: 'Général', description: 'Catégorie par défaut' });
-            }
-            categoryId = defaultCat.id;
-            categoryName = defaultCat.name;
-          }
-
-          const reference = validatedArgs.reference && validatedArgs.reference.trim() !== ''
-            ? validatedArgs.reference.trim()
-            : `PRD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`;
-
-          const newProduct = await Product.create({
-            name: validatedArgs.name.trim(),
-            reference,
-            price: validatedArgs.price,
-            quantity: validatedArgs.quantity ?? 0,
-            minStock: validatedArgs.minStock ?? 5,
-            categoryId,
-            description: validatedArgs.description || null
-          });
-
-          return {
-            success: true,
-            created: true,
-            product: {
-              id: newProduct.id,
-              name: newProduct.name,
-              reference: newProduct.reference,
-              price: parseFloat(newProduct.price),
-              quantity: newProduct.quantity,
-              minStock: newProduct.minStock,
-              categoryId,
-              category: categoryName,
-              description: newProduct.description
-            }
-          };
-        }
-
-        case 'vectorSearchProducts': {
-          const q = validatedArgs.query;
-          const keywords = q.split(/\s+/).filter(w => w.length > 1);
-          const orConditions = [
-            { name: { [likeOp]: `%${q}%` } },
-            { reference: { [likeOp]: `%${q}%` } },
-            { description: { [likeOp]: `%${q}%` } }
-          ];
-
-          for (const kw of keywords) {
-            orConditions.push({ name: { [likeOp]: `%${kw}%` } });
-          }
-
-          const products = await Product.findAll({
-            where: { [Op.or]: orConditions },
-            limit: validatedArgs.limit || 10,
-            include: [{ model: Category, as: 'category', attributes: ['id', 'name'] }]
-          });
-
-          return {
-            query: q,
-            count: products.length,
-            products: products.map(p => ({
-              id: p.id,
-              name: p.name,
-              reference: p.reference,
-              price: parseFloat(p.price),
-              quantity: p.quantity,
-              minStock: p.minStock,
-              category: p.category ? p.category.name : 'Unassigned',
-              description: p.description || ''
-            }))
-          };
-        }
-
-        default:
-          return { error: true, message: `Tool execution handler not found for '${toolName}'.` };
-      }
+      return await handler(validatedArgs, userContext);
     } catch (err) {
       logger.error(`Error executing tool '${toolName}':`, err);
       return {

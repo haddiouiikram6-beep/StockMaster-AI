@@ -1,6 +1,5 @@
 import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+
 import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -23,24 +22,17 @@ import aiRoutes from './routes/ai.routes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+
+// express instance  variable
 const app = express();
 
-// Enable Cross-Origin Resource Sharing (CORS) for mobile, web, and tooling
-app.use(cors({
-  origin: env.CORS_ORIGIN === '*' ? true : (env.CORS_ORIGIN || true),
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With']
-}));
 
-// Security Headers (Configured for compatibility with Swagger UI)
-app.use(helmet({
-  contentSecurityPolicy: false
-}));
 
 // Body Parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/api/', apiLimiter);
 
 // HTTP Request Logger
 if (env.NODE_ENV !== 'test') {
@@ -55,42 +47,7 @@ try {
   logger.warn('Swagger specification could not be loaded at /api/docs:', swErr.message);
 }
 
-// Welcome / API Discovery endpoints
-const apiDiscoveryHandler = (req, res) => {
-  res.status(200).json({
-    name: 'StockMaster AI Backend API',
-    version: '1.0.0',
-    description: 'Inventory Management System with AI Agent Integration',
-    status: 'ONLINE',
-    environment: env.NODE_ENV,
-    documentation: '/api/docs',
-    endpoints: {
-      health: '/api/health',
-      auth: '/api/auth',
-      products: '/api/products',
-      categories: '/api/categories',
-      suppliers: '/api/suppliers',
-      stockMovements: '/api/stock-movements',
-      ai: '/api/ai'
-    }
-  });
-};
 
-app.get('/', apiDiscoveryHandler);
-app.get('/api', apiDiscoveryHandler);
-
-// Health Check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    status: 'UP',
-    environment: env.NODE_ENV,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Apply API Rate Limiter
-app.use('/api/', apiLimiter);
 
 // Mount Application Routes
 app.use('/api/auth', authRoutes);

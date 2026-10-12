@@ -9,7 +9,6 @@ const startServer = async () => {
   try {
     // Authenticate database connection
     await sequelize.authenticate();
-    logger.info(`Database connected successfully (${sequelize.getDialect()})`);
 
     // Synchronize PostgreSQL primary key sequences with MAX(id) if running on PostgreSQL
     if (sequelize.getDialect() === 'postgres') {
@@ -23,7 +22,7 @@ const startServer = async () => {
               (SELECT MAX(id) IS NOT NULL FROM "${table}")
             );
           `);
-        } catch (_) {}
+        } catch (_) { }
       }
     }
 

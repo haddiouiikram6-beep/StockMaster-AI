@@ -40,7 +40,6 @@ const checkPromptInjection = (text) => {
     }
   }
 
-  // Reject excessively long or repetitive token stuffing
   if (cleanText.length > 4000) {
     return {
       isSafe: false,
@@ -60,8 +59,6 @@ const sanitizeOutput = (text) => {
   if (!text || typeof text !== 'string') return text;
 
   let sanitized = text;
-
-  // Mask database credentials or secrets if somehow leaked
   sanitized = sanitized.replace(/(password|jwt_secret|token|api_key)=['"]?[^'"\s]+['"]?/gi, '$1=***REDACTED***');
   sanitized = sanitized.replace(/postgres:\/\/[^:]+:[^@]+@/gi, 'postgres://***:***@');
   sanitized = sanitized.replace(/Bearer\s+[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*/gi, 'Bearer ***REDACTED***');
