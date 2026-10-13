@@ -6,10 +6,10 @@ export const useLogin = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: authApi.login,
-    onSuccess: (data) => {
-      // Assuming data.data contains accessToken and refreshToken
-      if (data.data?.accessToken && data.data?.refreshToken) {
-        useAuthStore.getState().updateTokens(data.data.accessToken, data.data.refreshToken, data.data.user);
+    onSuccess: async (res) => {
+      if (res.success && res.data) {
+        const { user, accessToken, refreshToken } = res.data;
+        await useAuthStore.getState().setAuth(user, accessToken, refreshToken);
       }
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },
@@ -25,9 +25,12 @@ export const useRegister = () => {
 export const useLogout = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: authApi.logout,
-    onSuccess: () => {
-      useAuthStore.getState().logout();
+    mutationFn: async () => {
+      const refreshToken = useAuthStore.getState().refreshToken || undefined;
+      await authApi.logout(refreshToken);
+    },
+    onSuccess: async () => {
+      await useAuthStore.getState().logout();
       queryClient.clear();
     },
   });

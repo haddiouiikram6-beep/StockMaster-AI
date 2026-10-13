@@ -30,8 +30,11 @@ import { COLORS, SHADOWS } from '../../src/constants/theme';
 import { MovementType } from '../../src/types';
 
 export default function ProductDetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+
+  const rawId = params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
   const [bookmarked, setBookmarked] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -43,14 +46,16 @@ export default function ProductDetailsScreen() {
   const {
     data: productData,
     isLoading: loadingProduct,
+    isPending: pendingProduct,
     isError,
+    error,
     refetch,
-  } = useProduct(id);
+  } = useProduct(id, !!id);
 
   const {
     data: movementsData,
     refetch: refetchMovements,
-  } = useProductStockMovements(id);
+  } = useProductStockMovements(id, 10, !!id);
 
   const createMovementMutation = useCreateStockMovement();
 
@@ -114,18 +119,30 @@ export default function ProductDetailsScreen() {
     }
   };
 
-  if (loadingProduct && !product) {
+  const isQueryLoading = !id || pendingProduct || (loadingProduct && !product);
+
+  if (isQueryLoading && !product && !isError) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <AppHeader title="Détails du produit" showBack />
         <LoadingState message="Chargement des détails du produit..." />
       </SafeAreaView>
     );
   }
 
-  if ((isError || !product) && !loadingProduct) {
+  if (isError || (!product && !isQueryLoading)) {
+    const isAuthError = (error as any)?.response?.status === 401;
+    const errorMessage = isAuthError
+      ? "Votre session a expiré. Veuillez vous reconnecter."
+      : (error as any)?.response?.data?.message || "Impossible de charger les détails du produit.";
+
     return (
       <SafeAreaView style={styles.safeArea}>
-        <ErrorState message="Impossible de charger les détails du produit." onRetry={refetch} />
+        <AppHeader title="Détails du produit" showBack />
+        <ErrorState
+          message={errorMessage}
+          onRetry={isAuthError ? () => router.replace('/(auth)/login') : () => refetch()}
+        />
       </SafeAreaView>
     );
   }

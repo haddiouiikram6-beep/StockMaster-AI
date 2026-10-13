@@ -15,17 +15,15 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { InputField } from '../../src/components/InputField';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { authApi } from '../../src/services/auth/apis';
-import { useAuthStore } from '../../src/store/useAuthStore';
+import { useLogin } from '../../src/services/auth/mutations';
 import { COLORS } from '../../src/constants/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const loginMutation = useLogin();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
@@ -35,15 +33,13 @@ export default function LoginScreen() {
     }
 
     try {
-      setLoading(true);
       setError(null);
-      const res = await authApi.login({
+      const res = await loginMutation.mutateAsync({
         email: email.trim().toLowerCase(),
         password,
       });
 
       if (res.success && res.data) {
-        await setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
         router.replace('/(tabs)');
       } else {
         setError(res.message || 'Échec de la connexion. Veuillez vérifier vos identifiants.');
@@ -55,8 +51,6 @@ export default function LoginScreen() {
         err.message ||
         'Impossible de se connecter au serveur. Veuillez vérifier votre réseau et l\'URL de l\'API.';
       setError(msg);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -130,7 +124,7 @@ export default function LoginScreen() {
             <PrimaryButton
               title="Se connecter"
               onPress={handleLogin}
-              loading={loading}
+              loading={loginMutation.isPending}
               style={styles.loginBtn}
             />
 

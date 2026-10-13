@@ -36,10 +36,10 @@ export const useInfiniteProducts = (params?: Omit<ProductQueryParams, 'page'>) =
   });
 };
 
-export const useProduct = (id: number | string, enabled = true) => {
+export const useProduct = (id?: number | string, enabled = true) => {
   return useQuery({
-    queryKey: PRODUCT_QUERY_KEYS.product(id),
-    queryFn: () => productApi.getById(id),
+    queryKey: PRODUCT_QUERY_KEYS.product(id ?? ''),
+    queryFn: () => productApi.getById(id!),
     enabled: enabled && !!id,
   });
 };

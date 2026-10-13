@@ -13,13 +13,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../src/components/AppHeader';
 import { useAuthStore } from '../../src/store/useAuthStore';
-import { authApi } from '../../src/services/auth/apis';
+import { useLogout } from '../../src/services/auth/mutations';
 import { API_BASE_URL } from '../../src/services/apiClient';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout, refreshToken } = useAuthStore();
+  const { user } = useAuthStore();
+  const logoutMutation = useLogout();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -44,10 +45,7 @@ export default function ProfileScreen() {
         text: 'Se déconnecter',
         style: 'destructive',
         onPress: async () => {
-          if (refreshToken) {
-            await authApi.logout(refreshToken);
-          }
-          await logout();
+          await logoutMutation.mutateAsync();
           router.replace('/(auth)/login');
         },
       },

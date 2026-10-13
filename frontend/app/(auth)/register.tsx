@@ -14,16 +14,16 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { InputField } from '../../src/components/InputField';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { authApi } from '../../src/services/auth/apis';
+import { useRegister } from '../../src/services/auth/mutations';
 import { COLORS } from '../../src/constants/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const registerMutation = useRegister();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleRegister = async () => {
@@ -38,9 +38,8 @@ export default function RegisterScreen() {
     }
 
     try {
-      setLoading(true);
       setError(null);
-      const res = await authApi.register({
+      const res = await registerMutation.mutateAsync({
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
         password,
@@ -62,8 +61,6 @@ export default function RegisterScreen() {
         err.message ||
         'Impossible de terminer l\'inscription. Veuillez réessayer.';
       setError(msg);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -145,7 +142,7 @@ export default function RegisterScreen() {
             <PrimaryButton
               title="S'inscrire"
               onPress={handleRegister}
-              loading={loading}
+              loading={registerMutation.isPending}
               style={styles.submitBtn}
             />
           </View>

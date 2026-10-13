@@ -13,11 +13,11 @@ export const useStockMovements = (params?: MovementQueryParams) => {
   });
 };
 
-export const useProductStockMovements = (productId: number | string, limit = 10) => {
+export const useProductStockMovements = (productId?: number | string, limit = 10, enabled = true) => {
   return useQuery({
-    queryKey: STOCK_MOVEMENT_QUERY_KEYS.productMovements(productId),
+    queryKey: STOCK_MOVEMENT_QUERY_KEYS.productMovements(productId ?? ''),
     queryFn: () => stockMovementApi.getAll({ productId: Number(productId), limit }),
-    enabled: !!productId,
+    enabled: enabled && !!productId,
   });
 };
 

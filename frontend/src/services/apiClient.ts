@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_BASE_URL } from '../constants/config';
 
@@ -17,8 +18,16 @@ export const api = axios.create({
 
 // Request interceptor to attach access token
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const accessToken = useAuthStore.getState().accessToken;
+  async (config: InternalAxiosRequestConfig) => {
+    let accessToken = useAuthStore.getState().accessToken;
+    if (!accessToken) {
+      try {
+        const legacyToken = await AsyncStorage.getItem('@stockmaster_access_token');
+        if (legacyToken) {
+          accessToken = legacyToken;
+        }
+      } catch {}
+    }
     if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
