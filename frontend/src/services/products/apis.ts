@@ -1,5 +1,5 @@
 import { api } from '../apiClient';
-import { ApiResponse, Product } from '../../types';
+import { ApiResponse, Product, ProductStats } from '../../types';
 
 export interface ProductQueryParams {
   page?: number;
@@ -7,6 +7,7 @@ export interface ProductQueryParams {
   categoryId?: number;
   supplierId?: number;
   minStock?: boolean | string;
+  status?: 'ALL' | 'LOW' | 'OUT';
   search?: string;
   sortBy?: string;
   order?: 'ASC' | 'DESC';
@@ -15,6 +16,10 @@ export interface ProductQueryParams {
 export const productApi = {
   getAll: async (params?: ProductQueryParams) => {
     const res = await api.get<ApiResponse<Product[]>>('/products', { params });
+    return res.data;
+  },
+  getStats: async () => {
+    const res = await api.get<ApiResponse<ProductStats>>('/products/stats');
     return res.data;
   },
   getById: async (id: number | string) => {

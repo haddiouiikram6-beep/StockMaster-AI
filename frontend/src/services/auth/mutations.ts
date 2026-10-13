@@ -9,7 +9,7 @@ export const useLogin = () => {
     onSuccess: (data) => {
       // Assuming data.data contains accessToken and refreshToken
       if (data.data?.accessToken && data.data?.refreshToken) {
-        useAuthStore.getState().updateTokens(data.data.accessToken, data.data.refreshToken);
+        useAuthStore.getState().updateTokens(data.data.accessToken, data.data.refreshToken, data.data.user);
       }
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
     },

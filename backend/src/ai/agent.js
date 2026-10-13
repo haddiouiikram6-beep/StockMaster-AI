@@ -87,9 +87,14 @@ class AIAgent {
 
     let finalReply = '';
 
+    logger.info(`start analyze intent of user message : ${message}`)
     try {
+      // create instance deepseek ai
       const activeClient = this.getClient();
+
+      // analyze intent of user message
       const intentResult = await this.analyzeIntent({ userMessage: message, history, client: activeClient });
+
 
       const toolExecutionResults = [];
 

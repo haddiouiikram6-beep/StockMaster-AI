@@ -125,7 +125,7 @@ Respond ONLY with a valid JSON object matching: {"userIntent": "...", "toolsRequ
       messages,
       response_format: { type: 'json_object' }
     });
-
+    logger.info("intent response" + JSON.stringify(response.choices[0].message))
     const parsed = JSON.parse(response.choices[0].message.content || '{}');
     return {
       userIntent: parsed.userIntent || 'General query',

@@ -1,5 +1,12 @@
-import { api } from '../apiClient';
+import axios from 'axios';
+import { api, API_BASE_URL } from '../apiClient';
 import { ApiResponse, User } from '../../types';
+
+export interface RefreshResponse {
+  accessToken: string;
+  refreshToken: string;
+  user?: User;
+}
 
 export const authApi = {
   login: async (credentials: { email: string; password: string }) => {
@@ -11,6 +18,17 @@ export const authApi = {
   },
   register: async (payload: { fullName: string; email: string; password: string }) => {
     const res = await api.post<ApiResponse<User>>('/auth/register', payload);
+    return res.data;
+  },
+  refreshToken: async (refreshToken: string) => {
+    const res = await axios.post<ApiResponse<RefreshResponse>>(
+      `${API_BASE_URL}/auth/refresh`,
+      { refreshToken },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000,
+      }
+    );
     return res.data;
   },
   logout: async (refreshToken?: string) => {
@@ -25,3 +43,4 @@ export const authApi = {
     return res.data;
   },
 };
+

@@ -11,5 +11,6 @@ const router = express.Router();
 router.post('/chat', authenticate, aiGuard, aiLimiter, validate(chatSchema), aiController.chat);
 router.get('/conversations', authenticate, aiController.getConversations);
 router.get('/conversations/:id', authenticate, aiController.getConversationById);
+router.delete('/conversations/:id', authenticate, aiController.deleteConversation);
 
 export default router;

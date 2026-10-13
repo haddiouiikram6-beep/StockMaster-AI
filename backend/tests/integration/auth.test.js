@@ -100,6 +100,9 @@ describe('Auth Integration Tests', () => {
     expect(refreshRes.body.success).toBe(true);
     expect(refreshRes.body.data.accessToken).toBeDefined();
     expect(refreshRes.body.data.refreshToken).toBeDefined();
+    expect(refreshRes.body.data.user).toBeDefined();
+    expect(refreshRes.body.data.user.email).toBe('admin@test.com');
+    expect(refreshRes.body.data.user.password).toBeUndefined();
   });
 
   it('POST /api/auth/logout - should revoke refresh token', async () => {

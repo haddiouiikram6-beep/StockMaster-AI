@@ -14,4 +14,8 @@ export const aiApi = {
     const res = await api.get<ApiResponse<Conversation>>(`/ai/conversations/${id}`);
     return res.data;
   },
+  deleteConversation: async (id: number | string) => {
+    const res = await api.delete<ApiResponse<{ message: string }>>(`/ai/conversations/${id}`);
+    return res.data;
+  },
 };

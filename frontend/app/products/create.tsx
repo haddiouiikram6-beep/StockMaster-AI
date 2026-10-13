@@ -17,7 +17,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadProductImage } from '../../src/services/cloudinaryService';
 import { InputField } from '../../src/components/InputField';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { useCreateProduct, useCategories } from '../../src/hooks/useQueries';
+import { useCreateProduct } from '../../src/services/products/mutations';
+import { useCategories } from '../../src/services/categories/queries';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
 export default function CreateProductScreen() {

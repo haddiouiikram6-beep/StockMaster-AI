@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './apiClient';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore, isJwtExpired } from '../store/useAuthStore';
 import { AIResponse, ReorderRecommendation } from '../types';
 
 export interface SendMessageOptions {
@@ -17,6 +17,20 @@ export interface SendMessageOptions {
   }) => void;
   onError: (errorMsg: string) => void;
 }
+
+/**
+ * Ensures an active, non-expired access token before sending AI requests
+ */
+const ensureValidToken = async (): Promise<string | null> => {
+  let token = useAuthStore.getState().accessToken;
+  if (!token || isJwtExpired(token)) {
+    const refreshed = await useAuthStore.getState().refreshSession();
+    if (refreshed) {
+      token = useAuthStore.getState().accessToken;
+    }
+  }
+  return token;
+};
 
 /**
  * Extracts structured reorder recommendations from markdown/text if present
@@ -87,7 +101,7 @@ export const extractReorderRecommendations = (text: string): ReorderRecommendati
  * Send message with progressive SSE streaming via XHR onprogress,
  * with automatic fallback to standard JSON if SSE is unavailable.
  */
-export const sendChatMessage = ({
+export const sendChatMessage = async ({
   message,
   conversationId,
   onChunk,
@@ -95,7 +109,7 @@ export const sendChatMessage = ({
   onComplete,
   onError,
 }: SendMessageOptions) => {
-  const token = useAuthStore.getState().accessToken;
+  const token = await ensureValidToken();
 
   // Try SSE streaming via XMLHttpRequest
   try {
@@ -169,7 +183,16 @@ export const sendChatMessage = ({
     };
 
     xhr.onload = () => {
-      if (errorHandled) return;
+      if (xhr.status === 401) {
+        useAuthStore.getState().refreshSession().then((refreshed: boolean) => {
+          if (refreshed) {
+            fallbackStandardChat({ message, conversationId, onComplete, onError });
+          } else {
+            onError("Votre session a expiré. Veuillez vous reconnecter.");
+          }
+        });
+        return;
+      }
 
       if (xhr.status === 400 || xhr.status === 422) {
         try {
@@ -279,10 +302,10 @@ const fallbackStandardChat = async ({
   onComplete: SendMessageOptions['onComplete'];
   onError: SendMessageOptions['onError'];
 }) => {
-  const token = useAuthStore.getState().accessToken;
+  let token = await ensureValidToken();
 
   try {
-    const res = await fetch(`${API_BASE_URL}/ai/chat`, {
+    let res = await fetch(`${API_BASE_URL}/ai/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -294,6 +317,28 @@ const fallbackStandardChat = async ({
         stream: false,
       }),
     });
+
+    if (res.status === 401) {
+      const refreshed = await useAuthStore.getState().refreshSession();
+      if (refreshed) {
+        token = useAuthStore.getState().accessToken;
+        res = await fetch(`${API_BASE_URL}/ai/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            message,
+            conversationId,
+            stream: false,
+          }),
+        });
+      } else {
+        onError("Votre session a expiré. Veuillez vous reconnecter.");
+        return;
+      }
+    }
 
     if (res.status === 400) {
       onError("Sorry, I can't process this request.");

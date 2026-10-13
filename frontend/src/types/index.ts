@@ -55,11 +55,20 @@ export interface StockMovement {
   user?: User;
 }
 
+export interface ProductStats {
+  totalProducts: number;
+  totalUnits: number;
+  totalValue: number;
+  lowStock: number;
+  outOfStock: number;
+}
+
 export interface Message {
   id?: number;
   conversationId?: number;
   role: 'user' | 'assistant' | 'system' | 'tool';
-  content: string;
+  content?: string;
+  textContent?: string;
   toolsExecuted?: string[];
   createdAt?: string;
   products?: any[];
@@ -116,8 +125,9 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   setAuth: (user: User, accessToken: string, refreshToken: string) => Promise<void>;
-  updateTokens: (accessToken: string, refreshToken: string) => Promise<void>;
+  updateTokens: (accessToken: string, refreshToken: string, user?: User) => Promise<void>;
   updateUser: (user: User) => Promise<void>;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
   initAuth: () => Promise<void>;
 }

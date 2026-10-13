@@ -56,6 +56,22 @@ class AIService {
 
     return conversation;
   }
+
+  /**
+   * Delete conversation and associated messages
+   */
+  async deleteConversation(id, userId) {
+    const conversation = await Conversation.findOne({
+      where: { id, userId }
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found.', 404);
+    }
+
+    await conversation.destroy();
+    return true;
+  }
 }
 
 export const aiService = new AIService();

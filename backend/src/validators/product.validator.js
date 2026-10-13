@@ -26,10 +26,11 @@ const updateProductSchema = z.object({
 
 const queryProductSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(20),
+  limit: z.coerce.number().int().positive().max(100).default(10),
   categoryId: z.coerce.number().int().positive().optional(),
   supplierId: z.coerce.number().int().positive().optional(),
   minStock: z.enum(['true', 'false']).transform(val => val === 'true').optional(),
+  status: z.enum(['ALL', 'LOW', 'OUT', 'all', 'low', 'out']).transform(val => val.toUpperCase()).optional(),
   search: z.string().trim().optional(),
   sortBy: z.enum(['name', 'price', 'quantity', 'reference', 'createdAt', 'updatedAt']).default('createdAt'),
   order: z.enum(['asc', 'desc', 'ASC', 'DESC']).default('desc').transform(val => val.toUpperCase())

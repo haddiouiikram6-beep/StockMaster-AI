@@ -9,10 +9,11 @@ class ProductService {
   async getAll(queryParams = {}) {
     const {
       page = 1,
-      limit = 20,
+      limit = 10,
       categoryId,
       supplierId,
       minStock,
+      status,
       search,
       sortBy = 'createdAt',
       order = 'DESC'
@@ -31,7 +32,14 @@ class ProductService {
       whereConditions.push({ supplierId });
     }
 
-    if (minStock === true || minStock === 'true') {
+    if (status) {
+      const upperStatus = String(status).toUpperCase();
+      if (upperStatus === 'LOW') {
+        whereConditions.push(where(col('quantity'), '<=', col('minStock')));
+      } else if (upperStatus === 'OUT') {
+        whereConditions.push({ quantity: 0 });
+      }
+    } else if (minStock === true || minStock === 'true') {
       whereConditions.push(where(col('quantity'), '<=', col('minStock')));
     }
 
@@ -190,6 +198,40 @@ class ProductService {
 
     await product.destroy();
     return true;
+  }
+
+  /**
+   * Calculate overall product & inventory statistics across all products (unlimited dataset)
+   */
+  async getStats() {
+    const totalProducts = await Product.count();
+
+    const totals = await Product.findAll({
+      attributes: [
+        [sequelize.fn('COALESCE', sequelize.fn('SUM', col('quantity')), 0), 'totalUnits'],
+        [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('price * quantity')), 0), 'totalValue']
+      ],
+      raw: true
+    });
+
+    const totalUnits = Number(totals[0]?.totalUnits || 0);
+    const totalValue = Number(totals[0]?.totalValue || 0);
+
+    const lowStock = await Product.count({
+      where: where(col('quantity'), '<=', col('minStock'))
+    });
+
+    const outOfStock = await Product.count({
+      where: { quantity: 0 }
+    });
+
+    return {
+      totalProducts,
+      totalUnits,
+      totalValue,
+      lowStock,
+      outOfStock
+    };
   }
 }
 

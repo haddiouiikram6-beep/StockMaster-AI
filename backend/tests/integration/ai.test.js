@@ -136,4 +136,23 @@ describe('AI Agent Integration Tests', () => {
     const logContent = fs.readFileSync(auditLogPath, 'utf8');
     expect(logContent).toContain('keyboard');
   });
+
+  it('GET and DELETE /api/ai/conversations - should list user conversations and allow deletion', async () => {
+    const listRes = await request(app)
+      .get('/api/ai/conversations')
+      .set('Authorization', `Bearer ${fixtures.employeeToken}`);
+
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+
+    if (listRes.body.data.length > 0) {
+      const convId = listRes.body.data[0].id;
+      const deleteRes = await request(app)
+        .delete(`/api/ai/conversations/${convId}`)
+        .set('Authorization', `Bearer ${fixtures.employeeToken}`);
+
+      expect(deleteRes.status).toBe(200);
+      expect(deleteRes.body.success).toBe(true);
+    }
+  });
 });

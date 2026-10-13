@@ -32,8 +32,14 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   return successResponse(res, null, 'Product deleted successfully.');
 });
 
+export const getProductStats = asyncHandler(async (req, res) => {
+  const stats = await productService.getStats();
+  return successResponse(res, stats);
+});
+
 export default {
   getAllProducts,
+  getProductStats,
   getProductById,
   createProduct,
   updateProduct,

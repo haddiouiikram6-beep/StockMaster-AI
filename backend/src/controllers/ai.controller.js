@@ -73,8 +73,14 @@ export const getConversationById = asyncHandler(async (req, res) => {
   return successResponse(res, conversation);
 });
 
+export const deleteConversation = asyncHandler(async (req, res) => {
+  await aiService.deleteConversation(req.params.id, req.user.id);
+  return successResponse(res, null, 'Conversation deleted successfully.');
+});
+
 export default {
   chat,
   getConversations,
-  getConversationById
+  getConversationById,
+  deleteConversation
 };

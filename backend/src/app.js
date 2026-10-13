@@ -1,12 +1,11 @@
 import express from 'express';
 
-import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 
-import env from './config/env.js';
+
 import { logger } from './utils/logger.js';
 import errorHandler from './middlewares/errorHandler.middleware.js';
 import { apiLimiter } from './middlewares/rateLimit.middleware.js';
@@ -33,11 +32,6 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/', apiLimiter);
-
-// HTTP Request Logger
-if (env.NODE_ENV !== 'test') {
-  app.use(morgan('combined', { stream: logger.stream }));
-}
 
 // Swagger UI Documentation
 try {

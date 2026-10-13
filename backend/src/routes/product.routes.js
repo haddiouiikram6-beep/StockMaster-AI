@@ -6,6 +6,7 @@ import { authenticate, authorize } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
+router.get('/stats', authenticate, productController.getProductStats);
 router.get('/', authenticate, validate(queryProductSchema, 'query'), productController.getAllProducts);
 router.get('/:id', authenticate, productController.getProductById);
 router.post('/', authenticate, authorize('admin', 'manager'), validate(createProductSchema), productController.createProduct);

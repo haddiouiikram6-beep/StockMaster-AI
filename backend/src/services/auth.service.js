@@ -116,7 +116,8 @@ class AuthService {
 
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken
+      refreshToken: newRefreshToken,
+      user: user.toJSON()
     };
   }
 

@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,7 +17,7 @@ import { FilterChip } from '../../src/components/FilterChip';
 import { ProductRow } from '../../src/components/ProductRow';
 import { LoadingState } from '../../src/components/LoadingState';
 import { EmptyState } from '../../src/components/EmptyState';
-import { useProducts } from '../../src/hooks/useQueries';
+import { useInfiniteProducts, useProductStats } from '../../src/services/products/queries';
 import { Product } from '../../src/types';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
@@ -26,62 +27,71 @@ export default function ProductsScreen() {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'LOW' | 'OUT'>('ALL');
 
+  // Infinite query - fetches first 10 products, then 10 more on scroll
   const {
-    data: productsData,
+    data: infiniteData,
     isLoading,
     refetch,
     isRefetching,
-  } = useProducts({ limit: 100 });
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteProducts({
+    limit: 10,
+    search: search.trim() || undefined,
+    status: activeFilter !== 'ALL' ? activeFilter : undefined,
+  });
 
-  // Real products from API
+  //  inventory statistics calculation across all products (unlimited/infinite dataset)
+  const {
+    data: statsData,
+    refetch: refetchStats,
+  } = useProductStats();
+
+  const backendStats = statsData?.data;
+
+  // Flattened products from loaded pages
   const rawProducts: Product[] = useMemo(() => {
-    return productsData?.data || [];
-  }, [productsData]);
+    if (!infiniteData?.pages) return [];
+    return infiniteData.pages.flatMap((page) => page.data || []);
+  }, [infiniteData]);
 
-  // Counts for filter chips
+  // Counts for filter chips from backend calculations across all products
   const counts = useMemo(() => {
+    if (backendStats) {
+      return {
+        total: Number(backendStats.totalProducts),
+        low: Number(backendStats.lowStock),
+        out: Number(backendStats.outOfStock),
+      };
+    }
     const total = rawProducts.length;
     const low = rawProducts.filter(
       (p) => Number(p.quantity) > 0 && Number(p.quantity) <= Number(p.minStock)
     ).length;
     const out = rawProducts.filter((p) => Number(p.quantity) === 0).length;
     return { total, low, out };
-  }, [rawProducts]);
+  }, [backendStats, rawProducts]);
 
-  // Filter and search
-  const filteredProducts = useMemo(() => {
-    let result = rawProducts;
-
-    if (activeFilter === 'LOW') {
-      result = result.filter(
-        (p) => Number(p.quantity) > 0 && Number(p.quantity) <= Number(p.minStock)
-      );
-    } else if (activeFilter === 'OUT') {
-      result = result.filter((p) => Number(p.quantity) === 0);
-    }
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.reference.toLowerCase().includes(q) ||
-          (p.category && p.category.name.toLowerCase().includes(q))
-      );
-    }
-
-    return result;
-  }, [rawProducts, activeFilter, search]);
-
-  // Quick stats: Total stock items and total value
+  // Quick stats: Total stock items and total stock value from backend calculation
   const stats = useMemo(() => {
+    if (backendStats) {
+      return {
+        totalItems: Number(backendStats.totalUnits),
+        totalValue: Number(backendStats.totalValue),
+      };
+    }
     const totalItems = rawProducts.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
     const totalValue = rawProducts.reduce(
       (sum, p) => sum + (Number(p.quantity) || 0) * (Number(p.price) || 0),
       0
     );
     return { totalItems, totalValue };
-  }, [rawProducts]);
+  }, [backendStats, rawProducts]);
+
+  const onRefresh = async () => {
+    await Promise.all([refetch(), refetchStats()]);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -155,11 +165,11 @@ export default function ProductsScreen() {
         </View>
 
         {/* Product List */}
-        {isLoading ? (
+        {isLoading && rawProducts.length === 0 ? (
           <LoadingState message="Chargement du catalogue..." />
         ) : (
           <FlatList
-            data={filteredProducts}
+            data={rawProducts}
             keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => (
               <ProductRow
@@ -167,11 +177,17 @@ export default function ProductsScreen() {
                 onPress={() => router.push(`/products/${item.id}`)}
               />
             )}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.4}
             contentContainerStyle={styles.listContent}
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
-                onRefresh={refetch}
+                onRefresh={onRefresh}
                 tintColor={COLORS.primaryBlue}
               />
             }
@@ -187,25 +203,36 @@ export default function ProductsScreen() {
               />
             }
             ListFooterComponent={
-              /* AI Prompt Shortcut Banner */
-              <TouchableOpacity
-                style={styles.aiBanner}
-                activeOpacity={0.8}
-                onPress={() => router.push('/(tabs)/ai')}
-              >
-                <View style={styles.aiBannerIcon}>
-                  <Ionicons name="sparkles" size={16} color={COLORS.primaryBlue} />
-                </View>
-                <View style={styles.aiBannerText}>
-                  <View style={styles.aiBannerHeader}>
-                    <Text style={styles.aiBannerTitle}>Besoin de réapprovisionner ?</Text>
-                    <Text style={styles.aiBannerAction}>Consulter l'IA →</Text>
+              <>
+                {isFetchingNextPage ? (
+                  <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color={COLORS.primaryBlue} />
+                    <Text style={{ fontSize: 12, color: COLORS.secondaryText, marginTop: 6 }}>
+                      Chargement des 10 produits suivants...
+                    </Text>
                   </View>
-                  <Text style={styles.aiBannerBody}>
-                    Demandez des recommandations d'achat automatiques à l'agent StockMaster.
-                  </Text>
-                </View>
-              </TouchableOpacity>
+                ) : null}
+
+                {/* AI Prompt Shortcut Banner */}
+                <TouchableOpacity
+                  style={styles.aiBanner}
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/(tabs)/ai')}
+                >
+                  <View style={styles.aiBannerIcon}>
+                    <Ionicons name="sparkles" size={16} color={COLORS.primaryBlue} />
+                  </View>
+                  <View style={styles.aiBannerText}>
+                    <View style={styles.aiBannerHeader}>
+                      <Text style={styles.aiBannerTitle}>Besoin de réapprovisionner ?</Text>
+                      <Text style={styles.aiBannerAction}>Consulter l'IA →</Text>
+                    </View>
+                    <Text style={styles.aiBannerBody}>
+                      Demandez des recommandations d'achat automatiques à l'agent StockMaster.
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </>
             }
           />
         )}

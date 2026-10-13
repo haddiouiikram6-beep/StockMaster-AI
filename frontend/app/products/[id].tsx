@@ -23,11 +23,9 @@ import { MovementRow } from '../../src/components/MovementRow';
 import { InputField } from '../../src/components/InputField';
 import { LoadingState } from '../../src/components/LoadingState';
 import { ErrorState } from '../../src/components/ErrorState';
-import {
-  useProduct,
-  useProductStockMovements,
-  useCreateStockMovement,
-} from '../../src/hooks/useQueries';
+import { useProduct } from '../../src/services/products/queries';
+import { useProductStockMovements } from '../../src/services/stockMovements/queries';
+import { useCreateStockMovement } from '../../src/services/stockMovements/mutations';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 import { MovementType } from '../../src/types';
 

@@ -12,17 +12,29 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppHeader } from '../../src/components/AppHeader';
 import { ChatBubble } from '../../src/components/ChatBubble';
 import { SuggestionChip } from '../../src/components/SuggestionChip';
-import { sendChatMessage } from '../../src/services/aiStream';
-import { Message, ReorderRecommendation } from '../../src/types';
+import { ConversationsSheet } from '../../src/components/ConversationsSheet';
+import { sendChatMessage, extractReorderRecommendations } from '../../src/services/aiStream';
+import { aiApi } from '../../src/services/ai/apis';
+import { useConversations, AI_QUERY_KEYS } from '../../src/services/ai/queries';
+import { useDeleteConversation } from '../../src/services/ai/mutations';
+import { Message, ReorderRecommendation, Conversation } from '../../src/types';
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
 export default function AIAssistantScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
+  const queryClient = useQueryClient();
+
+  const { data: convsData, isLoading: loadingConvs } = useConversations();
+  const deleteConvMutation = useDeleteConversation();
+  const conversations: Conversation[] = convsData?.data || [];
 
   const [conversationId, setConversationId] = useState<number | undefined>(undefined);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [loadingConversation, setLoadingConversation] = useState(false);
   const [inputText, setInputText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -83,6 +95,9 @@ export default function AIAssistantScreen() {
         setStreamingText('');
         setStreamingTools([]);
 
+        // Invalidate conversations list so sheet displays newly created discussion
+        queryClient.invalidateQueries({ queryKey: AI_QUERY_KEYS.conversations });
+
         setMessages((prev) => [
           ...prev,
           {
@@ -121,6 +136,48 @@ export default function AIAssistantScreen() {
   const handleClearChat = () => {
     setMessages([]);
     setConversationId(undefined);
+    setStreamingText('');
+    setStreamingTools([]);
+  };
+
+  const handleSelectConversation = async (id: number) => {
+    if (id === conversationId) return;
+
+    try {
+      setLoadingConversation(true);
+      const res = await aiApi.getConversationById(id);
+      if (res.data && res.data.messages) {
+        const loadedMessages = res.data.messages.map((m: any) => {
+          const content = m.textContent || m.content || '';
+          const recs = extractReorderRecommendations(content);
+          return {
+            message: {
+              role: m.role,
+              content,
+              createdAt: m.createdAt,
+            },
+            recommendations: recs.length > 0 ? recs : undefined,
+          };
+        });
+        setMessages(loadedMessages);
+        setConversationId(res.data.id);
+      }
+    } catch (e) {
+      console.error('Error loading conversation:', e);
+    } finally {
+      setLoadingConversation(false);
+    }
+  };
+
+  const handleDeleteConversation = async (id: number) => {
+    try {
+      await deleteConvMutation.mutateAsync(id);
+      if (id === conversationId) {
+        handleClearChat();
+      }
+    } catch (e) {
+      console.error('Error deleting conversation:', e);
+    }
   };
 
   return (
@@ -130,13 +187,28 @@ export default function AIAssistantScreen() {
         subtitle="Informations intelligentes sur l'inventaire"
         statusBadge="En ligne & Prêt"
         rightAction={
-          <TouchableOpacity
-            onPress={handleClearChat}
-            style={styles.newChatBtn}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="refresh-outline" size={18} color={COLORS.secondaryText} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setSheetVisible(true)}
+              style={styles.headerIconBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="chatbubbles-outline" size={18} color={COLORS.primaryBlue} />
+              {conversations.length > 0 && (
+                <View style={styles.headerBadge}>
+                  <Text style={styles.headerBadgeText}>{conversations.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleClearChat}
+              style={[styles.headerIconBtn, { marginLeft: 8 }]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="add" size={20} color={COLORS.secondaryText} />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -251,6 +323,26 @@ export default function AIAssistantScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Loading overlay when switching conversations */}
+      {loadingConversation && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="small" color={COLORS.primaryBlue} />
+          <Text style={styles.loadingOverlayText}>Chargement de la conversation...</Text>
+        </View>
+      )}
+
+      {/* Conversations History Sheet */}
+      <ConversationsSheet
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        conversations={conversations}
+        activeConversationId={conversationId}
+        isLoading={loadingConvs}
+        onSelectConversation={handleSelectConversation}
+        onNewConversation={handleClearChat}
+        onDeleteConversation={handleDeleteConversation}
+      />
     </SafeAreaView>
   );
 }
@@ -268,7 +360,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
   },
-  newChatBtn: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -277,6 +373,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
+    position: 'relative',
+  },
+  headerBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: COLORS.primaryBlue,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+  headerBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 90,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.md,
+    zIndex: 99,
+  },
+  loadingOverlayText: {
+    fontSize: 13,
+    color: COLORS.text,
+    marginLeft: 8,
+    fontWeight: '600',
   },
   chipsWrapper: {
     paddingVertical: 6,

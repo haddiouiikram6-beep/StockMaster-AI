@@ -14,7 +14,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { InputField } from '../../src/components/InputField';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { useProducts, useCreateStockMovement } from '../../src/hooks/useQueries';
+import { useProducts } from '../../src/services/products/queries';
+import { useCreateStockMovement } from '../../src/services/stockMovements/mutations';
 import { COLORS } from '../../src/constants/theme';
 import { MovementType } from '../../src/types';
 

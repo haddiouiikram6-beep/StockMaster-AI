@@ -22,9 +22,10 @@ import { ErrorState } from '../../src/components/ErrorState';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import {
   useProducts,
+  useProductStats,
   useLowStockProducts,
-  useStockMovements,
-} from '../../src/hooks/useQueries';
+} from '../../src/services/products/queries';
+import { useStockMovements } from '../../src/services/stockMovements/queries';
 import { COLORS } from '../../src/constants/theme';
 
 export default function DashboardScreen() {
@@ -33,13 +34,19 @@ export default function DashboardScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // Queries
+  // Queries - fetch only first 10 products
   const {
     data: productsData,
     isLoading: loadingProducts,
     isError: errorProducts,
     refetch: refetchProducts,
-  } = useProducts({ limit: 100 });
+  } = useProducts({ limit: 10, page: 1 });
+
+  // Backend calculation across all products (unlimited/infinite dataset)
+  const {
+    data: statsData,
+    refetch: refetchStats,
+  } = useProductStats();
 
   const {
     data: lowStockData,
@@ -57,14 +64,24 @@ export default function DashboardScreen() {
     setRefreshing(true);
     await Promise.all([
       refetchProducts(),
+      refetchStats(),
       refetchLowStock(),
       refetchMovements(),
     ]);
     setRefreshing(false);
   };
 
-  // Compute Statistics
+  // Compute Statistics using backend calculation across entire database
   const stats = useMemo(() => {
+    const backendStats = statsData?.data;
+    if (backendStats) {
+      return {
+        totalProducts: Number(backendStats.totalProducts).toLocaleString(),
+        lowStock: Number(backendStats.lowStock),
+        stockValue: formatCurrency(backendStats.totalValue),
+      };
+    }
+
     const products = productsData?.data || [];
     const totalCount = productsData?.pagination?.total ?? products.length;
 
@@ -78,14 +95,12 @@ export default function DashboardScreen() {
       return acc + Number(p.price || 0) * Number(p.quantity || 0);
     }, 0);
 
-    const formattedValue = formatCurrency(totalValueNum);
-
     return {
       totalProducts: totalCount.toLocaleString(),
       lowStock: lowStockCount,
-      stockValue: formattedValue,
+      stockValue: formatCurrency(totalValueNum),
     };
-  }, [productsData, lowStockData]);
+  }, [statsData, productsData, lowStockData]);
 
   const userName = user?.fullName?.split(' ')[0] || 'Utilisateur';
 

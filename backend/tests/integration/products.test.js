@@ -75,6 +75,20 @@ describe('Products Integration Tests', () => {
     expect(res.body.pagination.totalPages).toBe(2);
   });
 
+  it('GET /api/products/stats - should calculate overall inventory statistics across all products on the backend', async () => {
+    const res = await request(app)
+      .get('/api/products/stats')
+      .set('Authorization', `Bearer ${fixtures.employeeToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.totalProducts).toBe(2);
+    expect(res.body.data.totalUnits).toBe(22);
+    expect(res.body.data.totalValue).toBeCloseTo(2059.78, 2);
+    expect(res.body.data.lowStock).toBe(1);
+    expect(res.body.data.outOfStock).toBe(0);
+  });
+
   it('GET /api/products - should filter by minStock=true', async () => {
     const res = await request(app)
       .get('/api/products?minStock=true')

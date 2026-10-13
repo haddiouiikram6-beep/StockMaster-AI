@@ -63,7 +63,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
 
           <View style={styles.botBubble}>
             {/* Parsed, readable typography (no raw markdown hashes or symbols) */}
-            <MarkdownText content={message.content} />
+            <MarkdownText content={message.content || message.textContent || ''} />
 
             {/* Created Product Card */}
             {createdProduct && (
